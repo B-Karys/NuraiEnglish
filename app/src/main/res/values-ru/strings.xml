@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WordLy</string>
+    <string name="sign_in">Войти</string>
+    <string name="sign_up">Регистрация</string>
+    <string name="email">Электронная почта</string>
+    <string name="password">Пароль</string>
+    <string name="confirm_password">Подтвердить пароль</string>
+    <string name="your_name">Ваше имя</string>
+    <string name="home">Главная</string>
+    <string name="courses">Курсы</string>
+    <string name="lessons">Уроки</string>
+    <string name="progress">Прогресс</string>
+    <string name="review">Повторение</string>
+    <string name="admin">Админ</string>
+    <string name="logout">Выйти</string>
+    <string name="check">Проверить</string>
+    <string name="next">Далее</string>
+    <string name="continue_str">Продолжить</string>
+    <string name="correct">Правильно!</string>
+    <string name="wrong">Неправильно</string>
+    <string name="see_all">Все</string>
+    <string name="points">Очки</string>
+    <string name="no_courses">Курсов пока нет.</string>
+    <string name="no_mistakes">Нет ошибок для повторения.</string>
+    <string name="lesson_complete">Урок завершён!</string>
+    <string name="review_complete">Повторение завершено!</string>
+    <string name="language">Язык</string>
+    <string name="interface_language">Язык интерфейса</string>
+</resources>

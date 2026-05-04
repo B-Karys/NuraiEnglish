@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WordLy</string>
+    <string name="sign_in">Sign In</string>
+    <string name="sign_up">Sign Up</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="your_name">Your Name</string>
+    <string name="home">Home</string>
+    <string name="courses">Courses</string>
+    <string name="lessons">Lessons</string>
+    <string name="progress">Progress</string>
+    <string name="review">Review</string>
+    <string name="admin">Admin</string>
+    <string name="logout">Logout</string>
+    <string name="check">Check</string>
+    <string name="next">Next</string>
+    <string name="continue_str">Continue</string>
+    <string name="correct">Correct!</string>
+    <string name="wrong">Wrong</string>
+    <string name="see_all">See all</string>
+    <string name="points">Points</string>
+    <string name="no_courses">No courses available yet.</string>
+    <string name="no_mistakes">No mistakes to review.</string>
+    <string name="lesson_complete">Lesson Complete!</string>
+    <string name="review_complete">Review Complete!</string>
+    <string name="language">Language</string>
+    <string name="interface_language">Interface Language</string>
+</resources>

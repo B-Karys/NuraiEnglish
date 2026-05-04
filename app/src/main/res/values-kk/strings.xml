@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WordLy</string>
+    <string name="sign_in">Кіру</string>
+    <string name="sign_up">Тіркелу</string>
+    <string name="email">Электрондық пошта</string>
+    <string name="password">Құпия сөз</string>
+    <string name="confirm_password">Құпия сөзді растау</string>
+    <string name="your_name">Сіздің атыңыз</string>
+    <string name="home">Басты бет</string>
+    <string name="courses">Курстар</string>
+    <string name="lessons">Сабақтар</string>
+    <string name="progress">Прогресс</string>
+    <string name="review">Қайталау</string>
+    <string name="admin">Әкімші</string>
+    <string name="logout">Шығу</string>
+    <string name="check">Тексеру</string>
+    <string name="next">Келесі</string>
+    <string name="continue_str">Жалғастыру</string>
+    <string name="correct">Дұрыс!</string>
+    <string name="wrong">Қате</string>
+    <string name="see_all">Барлығы</string>
+    <string name="points">Ұпайлар</string>
+    <string name="no_courses">Курстар әлі жоқ.</string>
+    <string name="no_mistakes">Қайталанатын қателер жоқ.</string>
+    <string name="lesson_complete">Сабақ аяқталды!</string>
+    <string name="review_complete">Қайталау аяқталды!</string>
+    <string name="language">Тіл</string>
+    <string name="interface_language">Интерфейс тілі</string>
+</resources>
