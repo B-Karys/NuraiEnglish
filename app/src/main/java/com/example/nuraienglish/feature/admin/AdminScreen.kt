@@ -69,6 +69,9 @@ fun AdminScreen(
                 )
                 2 -> AddTaskTab(
                     courses = state.courses.map { it.id to it.title(language) },
+                    lessonsByCourse = state.lessonsByCourse.mapValues { (_, lessons) ->
+                        lessons.map { it.id to it.title(language) }
+                    },
                     isSaving = state.isSaving,
                     onSave = { cid, lid, task -> viewModel.saveTask(cid, lid, task) }
                 )
@@ -188,11 +191,12 @@ private fun AddLessonTab(
 @Composable
 private fun AddTaskTab(
     courses: List<Pair<String, String>>,
+    lessonsByCourse: Map<String, List<Pair<String, String>>>,
     isSaving: Boolean,
     onSave: (String, String, Task) -> Unit
 ) {
     var selectedCourse by remember { mutableStateOf(courses.firstOrNull()?.first ?: "") }
-    var lessonId by remember { mutableStateOf("") }
+    var selectedLesson by remember { mutableStateOf("") }
     var taskType by remember { mutableStateOf(TaskType.WORD_TRANSLATION) }
     var questionEn by remember { mutableStateOf("") }
     var answerEn by remember { mutableStateOf("") }
@@ -202,6 +206,13 @@ private fun AddTaskTab(
     var words by remember { mutableStateOf("") }
     var correctSentence by remember { mutableStateOf("") }
     var courseExpanded by remember { mutableStateOf(false) }
+    var lessonExpanded by remember { mutableStateOf(false) }
+
+    val lessons = lessonsByCourse[selectedCourse] ?: emptyList()
+
+    // Reset lesson selection when course changes
+    LaunchedEffect(selectedCourse) { selectedLesson = lessons.firstOrNull()?.first ?: "" }
+    LaunchedEffect(lessons) { if (selectedLesson.isBlank()) selectedLesson = lessons.firstOrNull()?.first ?: "" }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -209,6 +220,7 @@ private fun AddTaskTab(
     ) {
         Text("New Task", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
+        // Course dropdown
         ExposedDropdownMenuBox(expanded = courseExpanded, onExpandedChange = { courseExpanded = it }) {
             OutlinedTextField(
                 value = courses.firstOrNull { it.first == selectedCourse }?.second ?: "Select course",
@@ -223,7 +235,22 @@ private fun AddTaskTab(
             }
         }
 
-        OutlinedTextField(value = lessonId, onValueChange = { lessonId = it }, label = { Text("Lesson ID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        // Lesson dropdown — populated from actual lessons in Room
+        ExposedDropdownMenuBox(expanded = lessonExpanded, onExpandedChange = { lessonExpanded = it }) {
+            OutlinedTextField(
+                value = lessons.firstOrNull { it.first == selectedLesson }?.second
+                    ?: if (lessons.isEmpty()) "No lessons yet — add one first" else "Select lesson",
+                onValueChange = {}, readOnly = true, label = { Text("Lesson") },
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(lessonExpanded) },
+                enabled = lessons.isNotEmpty()
+            )
+            ExposedDropdownMenu(expanded = lessonExpanded, onDismissRequest = { lessonExpanded = false }) {
+                lessons.forEach { (id, title) ->
+                    DropdownMenuItem(text = { Text(title) }, onClick = { selectedLesson = id; lessonExpanded = false })
+                }
+            }
+        }
 
         Text("Task type", style = MaterialTheme.typography.labelLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -247,8 +274,8 @@ private fun AddTaskTab(
 
         Button(
             onClick = {
-                onSave(selectedCourse, lessonId, Task(
-                    lessonId = lessonId, courseId = selectedCourse, type = taskType,
+                onSave(selectedCourse, selectedLesson, Task(
+                    lessonId = selectedLesson, courseId = selectedCourse, type = taskType,
                     questionEn = questionEn, answerEn = answerEn, answerRu = answerRu, answerKk = answerKk,
                     options = options.split(",").map { it.trim() }.filter { it.isNotBlank() },
                     words = words.split(",").map { it.trim() }.filter { it.isNotBlank() },
@@ -256,7 +283,7 @@ private fun AddTaskTab(
                 ))
             },
             modifier = Modifier.fillMaxWidth().height(50.dp),
-            enabled = !isSaving && questionEn.isNotBlank() && lessonId.isNotBlank()
+            enabled = !isSaving && questionEn.isNotBlank() && selectedLesson.isNotBlank()
         ) {
             if (isSaving) CircularProgressIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
             else Text("Save Task")

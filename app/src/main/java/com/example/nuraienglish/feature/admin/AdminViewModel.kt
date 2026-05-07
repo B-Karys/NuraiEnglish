@@ -6,7 +6,6 @@ import com.example.nuraienglish.core.data.model.Course
 import com.example.nuraienglish.core.data.model.CourseType
 import com.example.nuraienglish.core.data.model.Lesson
 import com.example.nuraienglish.core.data.model.Task
-import com.example.nuraienglish.core.data.model.TaskType
 import com.example.nuraienglish.core.data.repository.CourseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +15,7 @@ import javax.inject.Inject
 
 data class AdminUiState(
     val courses: List<Course> = emptyList(),
+    val lessonsByCourse: Map<String, List<Lesson>> = emptyMap(),
     val isSaving: Boolean = false,
     val successMessage: String? = null,
     val error: String? = null
@@ -33,6 +33,16 @@ class AdminViewModel @Inject constructor(
         viewModelScope.launch {
             courseRepository.observeCourses().collect { courses ->
                 _state.value = _state.value.copy(courses = courses)
+                // Load lessons for every course so the task tab can show a dropdown
+                courses.forEach { course ->
+                    launch {
+                        courseRepository.observeLessons(course.id).collect { lessons ->
+                            val updated = _state.value.lessonsByCourse.toMutableMap()
+                            updated[course.id] = lessons
+                            _state.value = _state.value.copy(lessonsByCourse = updated)
+                        }
+                    }
+                }
             }
         }
     }

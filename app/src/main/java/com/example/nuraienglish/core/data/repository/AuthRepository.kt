@@ -35,7 +35,8 @@ class AuthRepository @Inject constructor(
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val uid = result.user!!.uid
             val user = User(uid = uid, email = email, displayName = displayName)
-            firestore.collection("users").document(uid).set(user.toMap()).await()
+            // Best-effort: write profile to Firestore; ignore if rules block it (e.g. stub project)
+            runCatching { firestore.collection("users").document(uid).set(user.toMap()).await() }
             user
         }
 
@@ -50,8 +51,10 @@ class AuthRepository @Inject constructor(
     }.getOrNull()
 
     suspend fun updateUserLanguage(uid: String, languageCode: String) {
-        firestore.collection("users").document(uid)
-            .update("language", languageCode).await()
+        runCatching {
+            firestore.collection("users").document(uid)
+                .update("language", languageCode).await()
+        }
     }
 
     private fun User.toMap() = mapOf(

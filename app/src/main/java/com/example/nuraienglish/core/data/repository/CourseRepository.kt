@@ -13,6 +13,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -73,17 +74,26 @@ class CourseRepository @Inject constructor(
     }
 
     suspend fun saveCourse(course: Course) {
-        val ref = if (course.id.isBlank()) firestore.collection("courses").document()
-                  else firestore.collection("courses").document(course.id)
-        ref.set(course.toMap()).await()
+        val id = course.id.ifBlank { UUID.randomUUID().toString() }
+        val withId = course.copy(id = id)
+        // Write to local Room so it appears immediately regardless of Firestore access
+        courseDao.upsertAll(listOf(withId.toEntity()))
+        // Best-effort sync to Firestore (fails silently on stub/restricted projects)
+        runCatching {
+            firestore.collection("courses").document(id).set(withId.toMap()).await()
+        }
     }
 
     suspend fun saveLesson(courseId: String, lesson: Lesson) {
-        val ref = if (lesson.id.isBlank())
-            firestore.collection("courses").document(courseId).collection("lessons").document()
-        else
-            firestore.collection("courses").document(courseId).collection("lessons").document(lesson.id)
-        ref.set(lesson.toMap()).await()
+        val id = lesson.id.ifBlank { UUID.randomUUID().toString() }
+        val withId = lesson.copy(id = id)
+        // Write to local Room so it appears immediately regardless of Firestore access
+        lessonDao.upsertAll(listOf(withId.toEntity()))
+        // Best-effort sync to Firestore (fails silently on stub/restricted projects)
+        runCatching {
+            firestore.collection("courses").document(courseId)
+                .collection("lessons").document(id).set(withId.toMap()).await()
+        }
     }
 
     private fun Course.toMap() = mapOf(

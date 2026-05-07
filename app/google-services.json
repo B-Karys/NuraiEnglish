@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "wordly-stub",
-    "storage_bucket": "wordly-stub.appspot.com"
+    "project_number": "496797690248",
+    "project_id": "wordly-1b99c",
+    "storage_bucket": "wordly-1b99c.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:496797690248:android:17a0340a21b8a64ec0723d",
         "android_client_info": {
           "package_name": "com.example.nuraienglish"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "STUB_API_KEY_REPLACE_WITH_REAL_ONE"
+          "current_key": "AIzaSyC3X3BnOnidv3fpj1yQ4pQykE1czhCBP-w"
         }
       ],
       "services": {
