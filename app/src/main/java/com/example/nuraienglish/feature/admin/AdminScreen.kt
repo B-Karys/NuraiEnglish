@@ -1,5 +1,6 @@
 package com.example.nuraienglish.feature.admin
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,7 +26,7 @@ fun AdminScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Add Course", "Add Lesson", "Add Task")
+    val tabs = listOf("Add Course", "Add Lesson", "Add Task", "Seed Data")
 
     LaunchedEffect(state.successMessage, state.error) {
         if (state.successMessage != null || state.error != null) {
@@ -75,6 +76,7 @@ fun AdminScreen(
                     isSaving = state.isSaving,
                     onSave = { cid, lid, task -> viewModel.saveTask(cid, lid, task) }
                 )
+                3 -> SeedDataTab(isSaving = state.isSaving, onSeed = viewModel::seedSampleData)
             }
         }
     }
@@ -116,9 +118,18 @@ private fun AddCourseTab(
         }
         OutlinedTextField(value = points, onValueChange = { points = it }, label = { Text("Points to unlock") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Text("Type", style = MaterialTheme.typography.labelLarge)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             CourseType.entries.forEach { t ->
-                FilterChip(selected = type == t, onClick = { type = t }, label = { Text(t.name) })
+                val label = when (t) {
+                    CourseType.VOCABULARY -> "Vocabulary"
+                    CourseType.GRAMMAR -> "Grammar"
+                    CourseType.LISTENING -> "Listening"
+                    CourseType.SPEAKING -> "Speaking"
+                }
+                FilterChip(selected = type == t, onClick = { type = t }, label = { Text(label) })
             }
         }
         Button(
@@ -253,9 +264,18 @@ private fun AddTaskTab(
         }
 
         Text("Task type", style = MaterialTheme.typography.labelLarge)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             TaskType.entries.forEach { t ->
-                FilterChip(selected = taskType == t, onClick = { taskType = t }, label = { Text(t.name.take(4)) })
+                val label = when (t) {
+                    TaskType.WORD_TRANSLATION -> "Word"
+                    TaskType.SENTENCE_TRANSLATION -> "Sentence"
+                    TaskType.MULTIPLE_CHOICE -> "Multiple choice"
+                    TaskType.SENTENCE_BUILDING -> "Build"
+                }
+                FilterChip(selected = taskType == t, onClick = { taskType = t }, label = { Text(label) })
             }
         }
 
@@ -287,6 +307,67 @@ private fun AddTaskTab(
         ) {
             if (isSaving) CircularProgressIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
             else Text("Save Task")
+        }
+    }
+}
+
+@Composable
+private fun SeedDataTab(isSaving: Boolean, onSeed: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(Modifier.height(24.dp))
+
+        Text("Sample Data", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+
+        Text(
+            "Creates 4 complete courses with lessons and tasks — one for each course type.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SeedRow("📖", "Vocabulary A1", "Basic Vocabulary — 2 lessons, word/choice tasks")
+                SeedRow("📝", "Grammar A1",    "English Grammar Basics — 2 lessons, sentence tasks")
+                SeedRow("👂", "Listening A2",  "Listen & Understand — 2 lessons, phrase tasks")
+                SeedRow("🗣️", "Speaking A2",   "Speak Confidently — 2 lessons, build/speak tasks")
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Button(
+            onClick = onSeed,
+            modifier = Modifier.fillMaxWidth().height(54.dp),
+            enabled = !isSaving
+        ) {
+            if (isSaving) {
+                CircularProgressIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                Spacer(Modifier.width(12.dp))
+                Text("Creating sample data…")
+            } else {
+                Text("Create Sample Data", style = MaterialTheme.typography.labelLarge)
+            }
+        }
+
+        Text(
+            "Note: you can tap this multiple times — each tap creates a new set with different IDs.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun SeedRow(emoji: String, title: String, description: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(emoji, style = MaterialTheme.typography.titleMedium)
+        Column {
+            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
