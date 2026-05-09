@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.nuraienglish.core.data.model.AppLanguage
 import com.example.nuraienglish.core.data.model.Lesson
+import com.example.nuraienglish.core.ui.uiStrings
 
 @Composable
 fun LessonListScreen(
@@ -26,22 +27,34 @@ fun LessonListScreen(
     viewModel: LessonListViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val strings = language.uiStrings()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.course?.title(language) ?: "Lessons", fontWeight = FontWeight.Bold) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }
+                title = {
+                    Text(
+                        state.course?.title(language) ?: strings.lessons,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                    }
+                }
             )
         }
     ) { padding ->
         if (state.isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
             return@Scaffold
         }
         if (state.lessons.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("No lessons available yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(strings.noLessonsAvailable, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             return@Scaffold
         }
@@ -56,6 +69,7 @@ fun LessonListScreen(
                     lesson = lesson,
                     index = index + 1,
                     language = language,
+                    strings = strings,
                     isCompleted = completed,
                     onClick = { onLessonClick(lesson.id) }
                 )
@@ -65,7 +79,14 @@ fun LessonListScreen(
 }
 
 @Composable
-private fun LessonCard(lesson: Lesson, index: Int, language: AppLanguage, isCompleted: Boolean, onClick: () -> Unit) {
+private fun LessonCard(
+    lesson: Lesson,
+    index: Int,
+    language: AppLanguage,
+    strings: com.example.nuraienglish.core.ui.UiStrings,
+    isCompleted: Boolean,
+    onClick: () -> Unit,
+) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
@@ -85,17 +106,30 @@ private fun LessonCard(lesson: Lesson, index: Int, language: AppLanguage, isComp
                 Text(
                     text = "$index",
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    color = if (isCompleted) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                    color = if (isCompleted) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleSmall
                 )
             }
             Column(Modifier.weight(1f)) {
-                Text(lesson.title(language), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyLarge)
-                Text("${lesson.taskCount} tasks · +${lesson.pointsReward} pts", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    lesson.title(language),
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    "${lesson.taskCount} ${strings.tasks} · +${lesson.pointsReward} ${strings.pts}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             if (isCompleted) {
-                Icon(Icons.Default.CheckCircle, contentDescription = "Completed", tint = MaterialTheme.colorScheme.primary)
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

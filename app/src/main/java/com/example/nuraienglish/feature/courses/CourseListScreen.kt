@@ -20,6 +20,7 @@ import com.example.nuraienglish.core.data.model.AppLanguage
 import com.example.nuraienglish.core.data.model.Course
 import com.example.nuraienglish.core.data.model.CourseType
 import com.example.nuraienglish.core.data.model.Progress
+import com.example.nuraienglish.core.ui.uiStrings
 
 @Composable
 fun CourseListScreen(
@@ -29,22 +30,29 @@ fun CourseListScreen(
     viewModel: CourseListViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val strings = language.uiStrings()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("All Courses", fontWeight = FontWeight.Bold) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }
+                title = { Text(strings.allCourses, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                    }
+                }
             )
         }
     ) { padding ->
         if (state.isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
             return@Scaffold
         }
         if (state.courses.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("No courses available yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(strings.noCoursesAvailable, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             return@Scaffold
         }
@@ -67,40 +75,77 @@ fun CourseListScreen(
 
 @Composable
 fun CourseCard(course: Course, progress: Progress?, language: AppLanguage, onClick: () -> Unit) {
+    val strings = language.uiStrings()
     val typeColor = when (course.type) {
         CourseType.VOCABULARY -> MaterialTheme.colorScheme.primary
-        CourseType.GRAMMAR -> MaterialTheme.colorScheme.secondary
-        CourseType.LISTENING -> MaterialTheme.colorScheme.tertiary
-        CourseType.SPEAKING -> MaterialTheme.colorScheme.error
+        CourseType.GRAMMAR    -> MaterialTheme.colorScheme.secondary
+        CourseType.LISTENING  -> MaterialTheme.colorScheme.tertiary
+        CourseType.SPEAKING   -> MaterialTheme.colorScheme.error
     }
+    val typeLabel = when (course.type) {
+        CourseType.VOCABULARY -> strings.typeVocabulary
+        CourseType.GRAMMAR    -> strings.typeGrammar
+        CourseType.LISTENING  -> strings.typeListening
+        CourseType.SPEAKING   -> strings.typeSpeaking
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Surface(color = typeColor.copy(alpha = 0.15f), shape = MaterialTheme.shapes.small) {
                     Text(
-                        text = course.type.name.lowercase().replaceFirstChar { it.uppercase() },
+                        text = typeLabel,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         color = typeColor,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
                     )
                 }
-                Text(course.level, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    course.level,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            Text(course.title(language), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(course.description(language), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                course.title(language),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                course.description(language),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
             if (progress != null && progress.totalLessons > 0) {
                 LinearProgressIndicator(
                     progress = { progress.completionFraction },
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
                     color = typeColor
                 )
-                Text("${progress.completedLessons.size} of ${progress.totalLessons} lessons done", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "${progress.completedLessons.size} ${strings.lessonsOf} ${progress.totalLessons} ${strings.lessonsDone}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             } else {
-                Text("${course.lessonCount} lessons", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "${course.lessonCount} ${strings.lessons}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
