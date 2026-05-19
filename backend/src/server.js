@@ -1,29 +1,8 @@
 require('dotenv').config();
-const dns = require('dns');
 const express = require('express');
-const nodemailer = require('nodemailer');
 
 const app = express();
 app.use(express.json());
-
-// Custom lookup that always resolves to IPv4 — fixes ENETUNREACH on Render and Mac
-function ipv4Lookup(hostname, _options, callback) {
-  dns.resolve4(hostname, (err, addresses) => {
-    if (err) return callback(err);
-    callback(null, addresses[0], 4);
-  });
-}
-
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  lookup: ipv4Lookup,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS, // App Password, not your Gmail password
-  },
-});
 
 // email -> { code: string, expiresAt: number }
 const pendingCodes = new Map();
@@ -31,6 +10,36 @@ const CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Send email via Brevo HTTP API (port 443 — works on Render)
+async function sendBrevoEmail(to, code) {
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: 'WordLy', email: process.env.SENDER_EMAIL },
+      to: [{ email: to }],
+      subject: 'WordLy — your verification code',
+      textContent: `Your WordLy verification code: ${code}\n\nThis code expires in 10 minutes.`,
+      htmlContent: `
+        <div style="font-family:sans-serif;max-width:400px;margin:auto">
+          <h2 style="color:#3B5998">WordLy</h2>
+          <p>Your email verification code:</p>
+          <h1 style="letter-spacing:8px;color:#222">${code}</h1>
+          <p style="color:#888;font-size:13px">Expires in 10 minutes. If you didn't request this, ignore this email.</p>
+        </div>
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Brevo error ${response.status}: ${body}`);
+  }
 }
 
 // POST /api/send-code   body: { email }
@@ -44,20 +53,8 @@ app.post('/api/send-code', async (req, res) => {
   pendingCodes.set(email.toLowerCase(), { code, expiresAt: Date.now() + CODE_TTL_MS });
 
   try {
-    await transporter.sendMail({
-      from: `WordLy <${process.env.GMAIL_USER}>`,
-      to: email,
-      subject: 'WordLy — your verification code',
-      text: `Your WordLy verification code: ${code}\n\nThis code expires in 10 minutes.`,
-      html: `
-        <div style="font-family:sans-serif;max-width:400px;margin:auto">
-          <h2 style="color:#3B5998">WordLy</h2>
-          <p>Your email verification code:</p>
-          <h1 style="letter-spacing:8px;color:#222">${code}</h1>
-          <p style="color:#888;font-size:13px">Expires in 10 minutes. If you didn't request this, ignore this email.</p>
-        </div>
-      `,
-    });
+    await sendBrevoEmail(email, code);
+    console.log(`Code sent to ${email}`);
     return res.json({ success: true });
   } catch (err) {
     console.error('Mail error:', err.message);
@@ -92,4 +89,5 @@ app.post('/api/verify-code', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`WordLy mailer listening on http://localhost:${PORT}`);
+  console.log(`Sender: ${process.env.SENDER_EMAIL || '(not set)'}`);
 });

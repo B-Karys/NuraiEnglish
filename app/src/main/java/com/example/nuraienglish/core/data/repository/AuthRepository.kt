@@ -33,10 +33,12 @@ class AuthRepository @Inject constructor(
     suspend fun register(email: String, password: String, displayName: String): Result<User> =
         runCatching {
             val result = auth.createUserWithEmailAndPassword(email, password).await()
-            val uid = result.user!!.uid
-            val user = User(uid = uid, email = email, displayName = displayName)
-            // Best-effort: write profile to Firestore; ignore if rules block it (e.g. stub project)
-            runCatching { firestore.collection("users").document(uid).set(user.toMap()).await() }
+            val fbUser = result.user!!
+            val user = User(uid = fbUser.uid, email = email, displayName = displayName)
+            // Best-effort: write profile to Firestore
+            runCatching { firestore.collection("users").document(fbUser.uid).set(user.toMap()).await() }
+            // Firebase sends a verification link to the email — no backend needed
+            runCatching { fbUser.sendEmailVerification().await() }
             user
         }
 
