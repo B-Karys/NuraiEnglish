@@ -1,19 +1,24 @@
 require('dotenv').config();
-// Force IPv4 DNS — prevents ENETUNREACH/EHOSTUNREACH on IPv6-only routes
 const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
-
 const express = require('express');
 const nodemailer = require('nodemailer');
 
 const app = express();
 app.use(express.json());
 
+// Custom lookup that always resolves to IPv4 — fixes ENETUNREACH on Render and Mac
+function ipv4Lookup(hostname, _options, callback) {
+  dns.resolve4(hostname, (err, addresses) => {
+    if (err) return callback(err);
+    callback(null, addresses[0], 4);
+  });
+}
+
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
-  secure: true,   // SSL on 465
-  family: 4,      // force IPv4 socket
+  secure: true,
+  lookup: ipv4Lookup,
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_PASS, // App Password, not your Gmail password
