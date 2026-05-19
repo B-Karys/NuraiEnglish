@@ -11,14 +11,21 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.nuraienglish.core.data.model.AppLanguage
+import com.example.nuraienglish.core.ui.authErrorMessage
+import com.example.nuraienglish.core.ui.uiStrings
+import com.example.nuraienglish.feature.auth.AuthLanguageSelector
 
 @Composable
 fun LoginScreen(
+    language: AppLanguage,
     onLoginSuccess: () -> Unit,
+    onNeedsEmailVerification: () -> Unit,
     onNavigateToRegister: () -> Unit,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val strings = language.uiStrings()
 
     Column(
         modifier = Modifier
@@ -28,6 +35,13 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        AuthLanguageSelector(
+            current = language,
+            onSelect = { viewModel.setLanguage(it) }
+        )
+
+        Spacer(Modifier.height(16.dp))
+
         Text(
             text = "WordLy",
             style = MaterialTheme.typography.displaySmall,
@@ -35,17 +49,17 @@ fun LoginScreen(
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = "Learn English every day",
+            text = strings.learnEveryDay,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(32.dp))
 
         OutlinedTextField(
             value = state.email,
             onValueChange = viewModel::onEmailChange,
-            label = { Text("Email") },
+            label = { Text(strings.emailLabel) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -57,7 +71,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
-            label = { Text("Password") },
+            label = { Text(strings.passwordLabel) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
@@ -77,18 +91,25 @@ fun LoginScreen(
         Spacer(Modifier.height(24.dp))
 
         Button(
-            onClick = { viewModel.login(onLoginSuccess) },
+            onClick = {
+                viewModel.login(
+                    onSuccess = onLoginSuccess,
+                    onNeedsVerification = onNeedsEmailVerification,
+                    errorMsg = strings.errorFillAllFields,
+                    errorMapper = { strings.authErrorMessage(it) }
+                )
+            },
             modifier = Modifier.fillMaxWidth().height(50.dp),
             enabled = !state.isLoading
         ) {
             if (state.isLoading) CircularProgressIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-            else Text("Sign In", style = MaterialTheme.typography.labelLarge)
+            else Text(strings.signIn, style = MaterialTheme.typography.labelLarge)
         }
 
         Spacer(Modifier.height(16.dp))
 
         TextButton(onClick = onNavigateToRegister) {
-            Text("Don't have an account? Sign up")
+            Text(strings.noAccount)
         }
     }
 }

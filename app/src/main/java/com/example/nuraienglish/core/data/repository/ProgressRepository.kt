@@ -67,8 +67,12 @@ class ProgressRepository @Inject constructor(
                 )
             }.getOrNull()
         }
+        // Clear stale cache first — prevents another user's data from leaking across accounts
+        progressDao.deleteAll()
         progressList.forEach { progressDao.upsert(it.toEntity()) }
     }
+
+    suspend fun clearLocalCache() = progressDao.deleteAll()
 
     private fun Progress.toFirestoreMap() = mapOf(
         "completedLessons" to completedLessons,

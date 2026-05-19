@@ -28,4 +28,4 @@ data class Course(
     }
 }
 
-enum class CourseType { VOCABULARY, GRAMMAR, LISTENING, SPEAKING }
+enum class CourseType { VOCABULARY, GRAMMAR, LISTENING }

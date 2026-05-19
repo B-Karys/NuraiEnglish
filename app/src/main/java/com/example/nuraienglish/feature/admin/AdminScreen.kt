@@ -127,7 +127,6 @@ private fun AddCourseTab(
                     CourseType.VOCABULARY -> "Vocabulary"
                     CourseType.GRAMMAR -> "Grammar"
                     CourseType.LISTENING -> "Listening"
-                    CourseType.SPEAKING -> "Speaking"
                 }
                 FilterChip(selected = type == t, onClick = { type = t }, label = { Text(label) })
             }
@@ -274,6 +273,8 @@ private fun AddTaskTab(
                     TaskType.SENTENCE_TRANSLATION -> "Sentence"
                     TaskType.MULTIPLE_CHOICE -> "Multiple choice"
                     TaskType.SENTENCE_BUILDING -> "Build"
+                    TaskType.LISTEN_AND_TRANSLATE -> "Listen + translate"
+                    TaskType.LISTEN_AND_WRITE -> "Listen + write"
                 }
                 FilterChip(selected = taskType == t, onClick = { taskType = t }, label = { Text(label) })
             }
@@ -323,17 +324,16 @@ private fun SeedDataTab(isSaving: Boolean, onSeed: () -> Unit) {
         Text("Sample Data", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
 
         Text(
-            "Creates 4 complete courses with lessons and tasks — one for each course type.",
+            "Creates 3 complete courses — 2 lessons each, 5 focused tasks per lesson.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SeedRow("📖", "Vocabulary A1", "Basic Vocabulary — 2 lessons, word/choice tasks")
-                SeedRow("📝", "Grammar A1",    "English Grammar Basics — 2 lessons, sentence tasks")
-                SeedRow("👂", "Listening A2",  "Listen & Understand — 2 lessons, phrase tasks")
-                SeedRow("🗣️", "Speaking A2",   "Speak Confidently — 2 lessons, build/speak tasks")
+                SeedRow("📖", "Vocabulary A1", "2 lessons · word translation only")
+                SeedRow("📝", "Grammar A1",    "2 lessons · fill-in-the-blank + sentence building")
+                SeedRow("👂", "Listening A2",  "2 lessons · listen+translate & listen+write only")
             }
         }
 

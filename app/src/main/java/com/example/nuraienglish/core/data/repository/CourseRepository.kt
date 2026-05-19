@@ -112,6 +112,7 @@ class CourseRepository @Inject constructor(
         "lessonId" to lessonId, "courseId" to courseId, "type" to type.name, "order" to order,
         "questionEn" to questionEn, "questionRu" to questionRu, "questionKk" to questionKk,
         "answerEn" to answerEn, "answerRu" to answerRu, "answerKk" to answerKk,
-        "options" to options, "words" to words, "correctSentence" to correctSentence
+        "options" to options, "optionsRu" to optionsRu, "optionsKk" to optionsKk,
+        "words" to words, "correctSentence" to correctSentence
     )
 }

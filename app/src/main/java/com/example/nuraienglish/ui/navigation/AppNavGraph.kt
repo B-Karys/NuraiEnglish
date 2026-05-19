@@ -11,6 +11,7 @@ import com.example.nuraienglish.core.data.model.AppLanguage
 import com.example.nuraienglish.feature.admin.AdminScreen
 import com.example.nuraienglish.feature.auth.login.LoginScreen
 import com.example.nuraienglish.feature.auth.register.RegisterScreen
+import com.example.nuraienglish.feature.auth.verify.VerifyEmailScreen
 import com.example.nuraienglish.feature.courses.CourseListScreen
 import com.example.nuraienglish.feature.home.HomeScreen
 import com.example.nuraienglish.feature.lesson.LessonListScreen
@@ -32,9 +33,15 @@ fun AppNavGraph(
     ) {
         composable(Screen.Login.route) {
             LoginScreen(
+                language = language,
                 onLoginSuccess = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                },
+                onNeedsEmailVerification = {
+                    navController.navigate(Screen.VerifyEmail.route) {
+                        popUpTo(Screen.Login.route) { inclusive = false }
                     }
                 },
                 onNavigateToRegister = { navController.navigate(Screen.Register.route) }
@@ -43,12 +50,29 @@ fun AppNavGraph(
 
         composable(Screen.Register.route) {
             RegisterScreen(
+                language = language,
                 onRegisterSuccess = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
+                    // After registration go to VerifyEmail — user cannot enter app until verified
+                    navController.navigate(Screen.VerifyEmail.route) {
+                        popUpTo(Screen.Login.route) { inclusive = false }
                     }
                 },
                 onNavigateToLogin = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.VerifyEmail.route) {
+            VerifyEmailScreen(
+                onVerified = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onCancel = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 

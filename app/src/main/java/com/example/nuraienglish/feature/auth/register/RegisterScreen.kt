@@ -13,14 +13,20 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.nuraienglish.core.data.model.AppLanguage
+import com.example.nuraienglish.core.ui.authErrorMessage
+import com.example.nuraienglish.core.ui.uiStrings
+import com.example.nuraienglish.feature.auth.AuthLanguageSelector
 
 @Composable
 fun RegisterScreen(
+    language: AppLanguage,
     onRegisterSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit,
     viewModel: RegisterViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val strings = language.uiStrings()
 
     Column(
         modifier = Modifier
@@ -31,19 +37,26 @@ fun RegisterScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Create Account", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        AuthLanguageSelector(
+            current = language,
+            onSelect = { viewModel.setLanguage(it) }
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(strings.createAccount, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text(
-            "Fill in your details to get started",
+            strings.createAccountSubtitle,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(24.dp))
 
         OutlinedTextField(
             value = state.email,
             onValueChange = viewModel::onEmailChange,
-            label = { Text("Email") },
+            label = { Text(strings.emailLabel) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -55,7 +68,7 @@ fun RegisterScreen(
         OutlinedTextField(
             value = state.displayName,
             onValueChange = viewModel::onDisplayNameChange,
-            label = { Text("Your name") },
+            label = { Text(strings.yourNameLabel) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             isError = state.error != null
@@ -66,7 +79,7 @@ fun RegisterScreen(
         OutlinedTextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
-            label = { Text("Password") },
+            label = { Text(strings.passwordLabel) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
@@ -79,7 +92,7 @@ fun RegisterScreen(
         OutlinedTextField(
             value = state.confirmPassword,
             onValueChange = viewModel::onConfirmPasswordChange,
-            label = { Text("Confirm password") },
+            label = { Text(strings.confirmPasswordLabel) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
@@ -99,24 +112,29 @@ fun RegisterScreen(
         Spacer(Modifier.height(24.dp))
 
         Button(
-            onClick = { viewModel.register(onRegisterSuccess) },
+            onClick = {
+                viewModel.register(
+                    onSuccess = onRegisterSuccess,
+                    errEmail = strings.errorEnterEmail,
+                    errName = strings.errorEnterName,
+                    errPasswordShort = strings.errorPasswordTooShort,
+                    errPasswordMismatch = strings.errorPasswordMismatch,
+                    errorMapper = { strings.authErrorMessage(it) }
+                )
+            },
             modifier = Modifier.fillMaxWidth().height(50.dp),
             enabled = !state.isLoading
         ) {
             if (state.isLoading) {
-                CircularProgressIndicator(
-                    Modifier.size(20.dp),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    strokeWidth = 2.dp
-                )
+                CircularProgressIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
             } else {
-                Text("Create Account", style = MaterialTheme.typography.labelLarge)
+                Text(strings.createAccount, style = MaterialTheme.typography.labelLarge)
             }
         }
 
         Spacer(Modifier.height(16.dp))
         TextButton(onClick = onNavigateToLogin) {
-            Text("Already have an account? Sign in")
+            Text(strings.hasAccount)
         }
     }
 }

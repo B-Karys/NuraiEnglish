@@ -116,10 +116,10 @@ class AdminViewModel @Inject constructor(
         seedVocabulary()
         seedGrammar()
         seedListening()
-        seedSpeaking()
     }
 
     // ── VOCABULARY ─────────────────────────────────────────────────────────────
+    // Focus: translating English words into the native language.
 
     private suspend fun seedVocabulary() {
         val cid = uuid()
@@ -131,54 +131,93 @@ class AdminViewModel @Inject constructor(
             descriptionKk = "Бастаушыларға арналған ең маңызды ағылшын сөздерін үйреніңіз."
         ))
 
-        // Lesson 1 — Greetings
+        // Lesson 1 — Greetings (5 word translations)
         val l1 = uuid()
         courseRepository.saveLesson(cid, Lesson(
-            id = l1, courseId = cid, order = 1, taskCount = 3, pointsReward = 15,
+            id = l1, courseId = cid, order = 1, taskCount = 5, pointsReward = 15,
             titleEn = "Greetings", titleRu = "Приветствия", titleKk = "Амандасу"
         ))
         courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 1,
             type = TaskType.WORD_TRANSLATION,
-            questionEn = "Hello", questionRu = "Переведите слово: Hello", questionKk = "Сөзді аударыңыз: Hello",
+            questionEn = "Hello",
+            questionRu = "Переведите слово: Hello",
+            questionKk = "Сөзді аударыңыз: Hello",
             answerEn = "Hello", answerRu = "Привет", answerKk = "Сәлем"
         ))
         courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 2,
             type = TaskType.WORD_TRANSLATION,
-            questionEn = "Thank you", questionRu = "Переведите: Thank you", questionKk = "Аударыңыз: Thank you",
+            questionEn = "Thank you",
+            questionRu = "Переведите слово: Thank you",
+            questionKk = "Сөзді аударыңыз: Thank you",
             answerEn = "Thank you", answerRu = "Спасибо", answerKk = "Рахмет"
         ))
         courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 3,
-            type = TaskType.MULTIPLE_CHOICE,
-            questionEn = "What does 'Goodbye' mean?", questionRu = "Что значит 'Goodbye'?", questionKk = "'Goodbye' нені білдіреді?",
-            answerEn = "Goodbye", answerRu = "До свидания", answerKk = "Сау бол",
-            options = listOf("До свидания", "Привет", "Спасибо", "Пожалуйста")
+            type = TaskType.WORD_TRANSLATION,
+            questionEn = "Goodbye",
+            questionRu = "Переведите слово: Goodbye",
+            questionKk = "Сөзді аударыңыз: Goodbye",
+            answerEn = "Goodbye", answerRu = "До свидания", answerKk = "Сау бол"
+        ))
+        courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 4,
+            type = TaskType.WORD_TRANSLATION,
+            questionEn = "Please",
+            questionRu = "Переведите слово: Please",
+            questionKk = "Сөзді аударыңыз: Please",
+            answerEn = "Please", answerRu = "Пожалуйста", answerKk = "Өтінем"
+        ))
+        courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 5,
+            type = TaskType.WORD_TRANSLATION,
+            questionEn = "Sorry",
+            questionRu = "Переведите слово: Sorry",
+            questionKk = "Сөзді аударыңыз: Sorry",
+            answerEn = "Sorry", answerRu = "Извините", answerKk = "Кешіріңіз"
         ))
 
-        // Lesson 2 — Family
+        // Lesson 2 — Family (5 word translations)
         val l2 = uuid()
         courseRepository.saveLesson(cid, Lesson(
-            id = l2, courseId = cid, order = 2, taskCount = 3, pointsReward = 15,
+            id = l2, courseId = cid, order = 2, taskCount = 5, pointsReward = 15,
             titleEn = "Family", titleRu = "Семья", titleKk = "Отбасы"
         ))
         courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 1,
             type = TaskType.WORD_TRANSLATION,
-            questionEn = "Mother", questionRu = "Переведите: Mother", questionKk = "Аударыңыз: Mother",
+            questionEn = "Mother",
+            questionRu = "Переведите слово: Mother",
+            questionKk = "Сөзді аударыңыз: Mother",
             answerEn = "Mother", answerRu = "Мама", answerKk = "Ана"
         ))
         courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 2,
             type = TaskType.WORD_TRANSLATION,
-            questionEn = "Brother", questionRu = "Переведите: Brother", questionKk = "Аударыңыз: Brother",
-            answerEn = "Brother", answerRu = "Брат", answerKk = "Аға"
+            questionEn = "Father",
+            questionRu = "Переведите слово: Father",
+            questionKk = "Сөзді аударыңыз: Father",
+            answerEn = "Father", answerRu = "Папа", answerKk = "Әке"
         ))
         courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 3,
-            type = TaskType.MULTIPLE_CHOICE,
-            questionEn = "Which word means 'Sister'?", questionRu = "Какое слово означает 'Сестра'?", questionKk = "Қайсы сөз 'Сіңлі' дегенді білдіреді?",
-            answerEn = "Sister", answerRu = "Сестра", answerKk = "Сіңлі",
-            options = listOf("Sister", "Brother", "Mother", "Father")
+            type = TaskType.WORD_TRANSLATION,
+            questionEn = "Sister",
+            questionRu = "Переведите слово: Sister",
+            questionKk = "Сөзді аударыңыз: Sister",
+            answerEn = "Sister", answerRu = "Сестра", answerKk = "Сіңлі"
+        ))
+        courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 4,
+            type = TaskType.WORD_TRANSLATION,
+            questionEn = "Brother",
+            questionRu = "Переведите слово: Brother",
+            questionKk = "Сөзді аударыңыз: Brother",
+            answerEn = "Brother", answerRu = "Брат", answerKk = "Аға"
+        ))
+        courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 5,
+            type = TaskType.WORD_TRANSLATION,
+            questionEn = "Son",
+            questionRu = "Переведите слово: Son",
+            questionKk = "Сөзді аударыңыз: Son",
+            answerEn = "Son", answerRu = "Сын", answerKk = "Ұл"
         ))
     }
 
     // ── GRAMMAR ────────────────────────────────────────────────────────────────
+    // Focus: grammar rules — fill-in-the-blank multiple choice + sentence building.
 
     private suspend fun seedGrammar() {
         val cid = uuid()
@@ -190,177 +229,200 @@ class AdminViewModel @Inject constructor(
             descriptionKk = "Ағылшын грамматикасының негізгі ережелерін меңгеріңіз."
         ))
 
-        // Lesson 1 — Present Simple
+        // Lesson 1 — Present Simple (3 multiple-choice grammar + 2 sentence building)
         val l1 = uuid()
         courseRepository.saveLesson(cid, Lesson(
-            id = l1, courseId = cid, order = 1, taskCount = 3, pointsReward = 20,
+            id = l1, courseId = cid, order = 1, taskCount = 5, pointsReward = 20,
             titleEn = "Present Simple", titleRu = "Настоящее простое время", titleKk = "Қазіргі қарапайым шақ"
         ))
         courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 1,
-            type = TaskType.SENTENCE_TRANSLATION,
-            questionEn = "I am a student.", questionRu = "Переведите: I am a student.", questionKk = "Аударыңыз: I am a student.",
-            answerEn = "I am a student.", answerRu = "Я студент.", answerKk = "Мен студентпін."
+            type = TaskType.MULTIPLE_CHOICE,
+            questionEn = "Choose the correct form: She ___ English.",
+            questionRu = "Выберите правильную форму: She ___ English.",
+            questionKk = "Дұрыс формасын таңдаңыз: She ___ English.",
+            answerEn = "speaks", answerRu = "speaks", answerKk = "speaks",
+            options = listOf("speaks", "speak", "speaking", "spoke"),
+            optionsRu = listOf("speaks", "speak", "speaking", "spoke"),
+            optionsKk = listOf("speaks", "speak", "speaking", "spoke")
         ))
         courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 2,
             type = TaskType.MULTIPLE_CHOICE,
-            questionEn = "Choose the correct form: She ___ English.", questionRu = "Выберите правильную форму: She ___ English.", questionKk = "Дұрыс формасын таңдаңыз: She ___ English.",
-            answerEn = "speaks", answerRu = "speaks", answerKk = "speaks",
-            options = listOf("speaks", "speak", "speaking", "spoke")
+            questionEn = "Choose the correct form: They ___ to school.",
+            questionRu = "Выберите правильную форму: They ___ to school.",
+            questionKk = "Дұрыс формасын таңдаңыз: They ___ to school.",
+            answerEn = "go", answerRu = "go", answerKk = "go",
+            options = listOf("go", "goes", "going", "went"),
+            optionsRu = listOf("go", "goes", "going", "went"),
+            optionsKk = listOf("go", "goes", "going", "went")
         ))
         courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 3,
+            type = TaskType.MULTIPLE_CHOICE,
+            questionEn = "Choose the correct form: He ___ a doctor.",
+            questionRu = "Выберите правильную форму: He ___ a doctor.",
+            questionKk = "Дұрыс формасын таңдаңыз: He ___ a doctor.",
+            answerEn = "is", answerRu = "is", answerKk = "is",
+            options = listOf("is", "are", "am", "be"),
+            optionsRu = listOf("is", "are", "am", "be"),
+            optionsKk = listOf("is", "are", "am", "be")
+        ))
+        courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 4,
             type = TaskType.SENTENCE_BUILDING,
-            questionEn = "Build the sentence:", questionRu = "Составьте предложение:", questionKk = "Сөйлем құрыңыз:",
-            answerEn = "I go to school every day", answerRu = "I go to school every day", answerKk = "I go to school every day",
-            words = listOf("I", "go", "to", "school", "every", "day"),
+            questionEn = "Я хожу в школу каждый день",
+            questionRu = "Составьте: «Я хожу в школу каждый день»",
+            questionKk = "Құрастырыңыз: «Мен мектепке күн сайын барамын»",
+            answerEn = "I go to school every day",
+            answerRu = "I go to school every day",
+            answerKk = "I go to school every day",
+            words = listOf("I", "go", "to", "school", "every", "day", "home"),
             correctSentence = "I go to school every day"
         ))
+        courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 5,
+            type = TaskType.SENTENCE_BUILDING,
+            questionEn = "Она читает книги дома",
+            questionRu = "Составьте: «Она читает книги дома»",
+            questionKk = "Құрастырыңыз: «Ол үйде кітап оқиды»",
+            answerEn = "She reads books at home",
+            answerRu = "She reads books at home",
+            answerKk = "She reads books at home",
+            words = listOf("She", "reads", "books", "at", "home", "school"),
+            correctSentence = "She reads books at home"
+        ))
 
-        // Lesson 2 — Articles
+        // Lesson 2 — Articles (3 multiple-choice + 2 sentence building)
         val l2 = uuid()
         courseRepository.saveLesson(cid, Lesson(
-            id = l2, courseId = cid, order = 2, taskCount = 3, pointsReward = 20,
+            id = l2, courseId = cid, order = 2, taskCount = 5, pointsReward = 20,
             titleEn = "Articles: a, an, the", titleRu = "Артикли: a, an, the", titleKk = "Артикльдер: a, an, the"
         ))
         courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 1,
             type = TaskType.MULTIPLE_CHOICE,
-            questionEn = "Choose the correct article: ___ apple", questionRu = "Выберите артикль: ___ apple", questionKk = "Артикльді таңдаңыз: ___ apple",
+            questionEn = "Choose the correct article: ___ apple",
+            questionRu = "Выберите артикль: ___ apple",
+            questionKk = "Артикльді таңдаңыз: ___ apple",
             answerEn = "an", answerRu = "an", answerKk = "an",
-            options = listOf("an", "a", "the", "—")
+            options = listOf("an", "a", "the", "—"),
+            optionsRu = listOf("an", "a", "the", "—"),
+            optionsKk = listOf("an", "a", "the", "—")
         ))
         courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 2,
-            type = TaskType.SENTENCE_TRANSLATION,
-            questionEn = "The cat is on the table.", questionRu = "Переведите: The cat is on the table.", questionKk = "Аударыңыз: The cat is on the table.",
-            answerEn = "The cat is on the table.", answerRu = "Кошка на столе.", answerKk = "Мысық үстелде."
+            type = TaskType.MULTIPLE_CHOICE,
+            questionEn = "Choose the correct article: ___ Sun",
+            questionRu = "Выберите артикль: ___ Sun",
+            questionKk = "Артикльді таңдаңыз: ___ Sun",
+            answerEn = "the", answerRu = "the", answerKk = "the",
+            options = listOf("the", "a", "an", "—"),
+            optionsRu = listOf("the", "a", "an", "—"),
+            optionsKk = listOf("the", "a", "an", "—")
         ))
         courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 3,
+            type = TaskType.MULTIPLE_CHOICE,
+            questionEn = "Choose the correct article: ___ book",
+            questionRu = "Выберите артикль: ___ book",
+            questionKk = "Артикльді таңдаңыз: ___ book",
+            answerEn = "a", answerRu = "a", answerKk = "a",
+            options = listOf("a", "an", "the", "—"),
+            optionsRu = listOf("a", "an", "the", "—"),
+            optionsKk = listOf("a", "an", "the", "—")
+        ))
+        courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 4,
             type = TaskType.SENTENCE_BUILDING,
-            questionEn = "Build the sentence:", questionRu = "Составьте предложение:", questionKk = "Сөйлем құрыңыз:",
-            answerEn = "The dog is very big", answerRu = "The dog is very big", answerKk = "The dog is very big",
-            words = listOf("The", "dog", "is", "very", "big"),
+            questionEn = "Собака очень большая",
+            questionRu = "Составьте: «Собака очень большая»",
+            questionKk = "Құрастырыңыз: «Ит өте үлкен»",
+            answerEn = "The dog is very big",
+            answerRu = "The dog is very big",
+            answerKk = "The dog is very big",
+            words = listOf("The", "dog", "is", "very", "big", "small"),
             correctSentence = "The dog is very big"
+        ))
+        courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 5,
+            type = TaskType.SENTENCE_BUILDING,
+            questionEn = "У меня есть маленькая кошка",
+            questionRu = "Составьте: «У меня есть маленькая кошка»",
+            questionKk = "Құрастырыңыз: «Менің кішкентай мысығым бар»",
+            answerEn = "I have a small cat",
+            answerRu = "I have a small cat",
+            answerKk = "I have a small cat",
+            words = listOf("I", "have", "a", "small", "cat", "big"),
+            correctSentence = "I have a small cat"
         ))
     }
 
     // ── LISTENING ──────────────────────────────────────────────────────────────
+    // Focus: audio-only tasks — listen+translate and listen+write, no reading.
 
     private suspend fun seedListening() {
         val cid = uuid()
         courseRepository.saveCourse(Course(
             id = cid, level = "A2", type = CourseType.LISTENING, lessonCount = 2, pointsToUnlock = 30,
             titleEn = "Listen & Understand", titleRu = "Слушай и понимай", titleKk = "Тыңда және түсін",
-            descriptionEn = "Improve your English listening and comprehension skills.",
-            descriptionRu = "Развивайте навыки понимания английской речи на слух.",
-            descriptionKk = "Ағылшын тілін тыңдап түсіну дағдыларыңызды дамытыңыз."
+            descriptionEn = "Train your ear — listen to English and respond without reading the text.",
+            descriptionRu = "Тренируйте слух — слушайте английскую речь и отвечайте, не читая текст.",
+            descriptionKk = "Құлағыңызды жаттықтырыңыз — мәтінді оқымай ағылшынша тыңдап жауап беріңіз."
         ))
 
-        // Lesson 1 — Common Phrases
+        // Lesson 1 — Common Phrases (3 listen+translate, 2 listen+write)
         val l1 = uuid()
         courseRepository.saveLesson(cid, Lesson(
-            id = l1, courseId = cid, order = 1, taskCount = 3, pointsReward = 20,
+            id = l1, courseId = cid, order = 1, taskCount = 5, pointsReward = 20,
             titleEn = "Common Phrases", titleRu = "Общие фразы", titleKk = "Жалпы сөз тіркестері"
         ))
         courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 1,
-            type = TaskType.SENTENCE_TRANSLATION,
-            questionEn = "How are you?", questionRu = "Переведите: How are you?", questionKk = "Аударыңыз: How are you?",
-            answerEn = "How are you?", answerRu = "Как дела?", answerKk = "Қалың қалай?"
+            type = TaskType.LISTEN_AND_TRANSLATE,
+            questionEn = "How are you",
+            answerEn = "How are you", answerRu = "Как дела", answerKk = "Қалың қалай"
         ))
         courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 2,
-            type = TaskType.WORD_TRANSLATION,
-            questionEn = "Please", questionRu = "Переведите: Please", questionKk = "Аударыңыз: Please",
-            answerEn = "Please", answerRu = "Пожалуйста", answerKk = "Өтінем"
+            type = TaskType.LISTEN_AND_TRANSLATE,
+            questionEn = "Nice to meet you",
+            answerEn = "Nice to meet you", answerRu = "Приятно познакомиться", answerKk = "Танысқаныма қуаныштымын"
         ))
         courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 3,
-            type = TaskType.MULTIPLE_CHOICE,
-            questionEn = "What does 'Excuse me' mean?", questionRu = "Что значит 'Excuse me'?", questionKk = "'Excuse me' нені білдіреді?",
-            answerEn = "Excuse me", answerRu = "Извините", answerKk = "Кешіріңіз",
-            options = listOf("Извините", "Спасибо", "Пожалуйста", "Привет")
+            type = TaskType.LISTEN_AND_TRANSLATE,
+            questionEn = "Excuse me",
+            answerEn = "Excuse me", answerRu = "Простите", answerKk = "Кешіріңіз"
+        ))
+        courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 4,
+            type = TaskType.LISTEN_AND_WRITE,
+            questionEn = "I am fine thank you",
+            answerEn = "I am fine thank you", answerRu = "I am fine thank you", answerKk = "I am fine thank you"
+        ))
+        courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 5,
+            type = TaskType.LISTEN_AND_WRITE,
+            questionEn = "See you later",
+            answerEn = "See you later", answerRu = "See you later", answerKk = "See you later"
         ))
 
-        // Lesson 2 — Days & Time
+        // Lesson 2 — Days & Time (3 listen+translate, 2 listen+write)
         val l2 = uuid()
         courseRepository.saveLesson(cid, Lesson(
-            id = l2, courseId = cid, order = 2, taskCount = 3, pointsReward = 20,
+            id = l2, courseId = cid, order = 2, taskCount = 5, pointsReward = 20,
             titleEn = "Days & Time", titleRu = "Дни и время", titleKk = "Күндер мен уақыт"
         ))
         courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 1,
-            type = TaskType.WORD_TRANSLATION,
-            questionEn = "Monday", questionRu = "Переведите: Monday", questionKk = "Аударыңыз: Monday",
-            answerEn = "Monday", answerRu = "Понедельник", answerKk = "Дүйсенбі"
+            type = TaskType.LISTEN_AND_TRANSLATE,
+            questionEn = "Today is Monday",
+            answerEn = "Today is Monday", answerRu = "Сегодня понедельник", answerKk = "Бүгін дүйсенбі"
         ))
         courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 2,
-            type = TaskType.MULTIPLE_CHOICE,
-            questionEn = "Which day comes after Tuesday?", questionRu = "Какой день идёт после вторника?", questionKk = "Сейсенбіден кейін қандай күн келеді?",
-            answerEn = "Wednesday", answerRu = "Среда", answerKk = "Сәрсенбі",
-            options = listOf("Wednesday", "Monday", "Friday", "Sunday")
+            type = TaskType.LISTEN_AND_TRANSLATE,
+            questionEn = "It is five o'clock",
+            answerEn = "It is five o'clock", answerRu = "Сейчас пять часов", answerKk = "Сағат бес"
         ))
         courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 3,
-            type = TaskType.SENTENCE_TRANSLATION,
-            questionEn = "It is five o'clock.", questionRu = "Переведите: It is five o'clock.", questionKk = "Аударыңыз: It is five o'clock.",
-            answerEn = "It is five o'clock.", answerRu = "Сейчас пять часов.", answerKk = "Сағат бес."
+            type = TaskType.LISTEN_AND_TRANSLATE,
+            questionEn = "I wake up early",
+            answerEn = "I wake up early", answerRu = "Я просыпаюсь рано", answerKk = "Мен ерте оянамын"
         ))
-    }
-
-    // ── SPEAKING ───────────────────────────────────────────────────────────────
-
-    private suspend fun seedSpeaking() {
-        val cid = uuid()
-        courseRepository.saveCourse(Course(
-            id = cid, level = "A2", type = CourseType.SPEAKING, lessonCount = 2, pointsToUnlock = 30,
-            titleEn = "Speak English Confidently", titleRu = "Говори по-английски уверенно", titleKk = "Ағылшынша сенімді сөйле",
-            descriptionEn = "Practice speaking English with everyday expressions.",
-            descriptionRu = "Практикуйте разговорный английский с повседневными выражениями.",
-            descriptionKk = "Күнделікті сөз тіркестерімен ағылшынша сөйлеуді жаттығыңыз."
+        courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 4,
+            type = TaskType.LISTEN_AND_WRITE,
+            questionEn = "What time is it",
+            answerEn = "What time is it", answerRu = "What time is it", answerKk = "What time is it"
         ))
-
-        // Lesson 1 — Introductions
-        val l1 = uuid()
-        courseRepository.saveLesson(cid, Lesson(
-            id = l1, courseId = cid, order = 1, taskCount = 3, pointsReward = 25,
-            titleEn = "Introducing Yourself", titleRu = "Представление", titleKk = "Өзіңді таныстыру"
-        ))
-        courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 1,
-            type = TaskType.SENTENCE_BUILDING,
-            questionEn = "Build the sentence:", questionRu = "Составьте предложение:", questionKk = "Сөйлем құрыңыз:",
-            answerEn = "My name is Alex", answerRu = "My name is Alex", answerKk = "My name is Alex",
-            words = listOf("My", "name", "is", "Alex", "am", "I"),
-            correctSentence = "My name is Alex"
-        ))
-        courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 2,
-            type = TaskType.SENTENCE_TRANSLATION,
-            questionEn = "Nice to meet you!", questionRu = "Переведите: Nice to meet you!", questionKk = "Аударыңыз: Nice to meet you!",
-            answerEn = "Nice to meet you!", answerRu = "Приятно познакомиться!", answerKk = "Танысқаныма қуаныштымын!"
-        ))
-        courseRepository.saveTask(cid, l1, Task(courseId = cid, lessonId = l1, order = 3,
-            type = TaskType.SENTENCE_BUILDING,
-            questionEn = "Build the sentence:", questionRu = "Составьте предложение:", questionKk = "Сөйлем құрыңыз:",
-            answerEn = "I am from Kazakhstan", answerRu = "I am from Kazakhstan", answerKk = "I am from Kazakhstan",
-            words = listOf("I", "am", "from", "Kazakhstan", "live", "in"),
-            correctSentence = "I am from Kazakhstan"
-        ))
-
-        // Lesson 2 — Daily Routine
-        val l2 = uuid()
-        courseRepository.saveLesson(cid, Lesson(
-            id = l2, courseId = cid, order = 2, taskCount = 3, pointsReward = 25,
-            titleEn = "Daily Routine", titleRu = "Распорядок дня", titleKk = "Күнделікті тәртіп"
-        ))
-        courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 1,
-            type = TaskType.SENTENCE_TRANSLATION,
-            questionEn = "I wake up at seven.", questionRu = "Переведите: I wake up at seven.", questionKk = "Аударыңыз: I wake up at seven.",
-            answerEn = "I wake up at seven.", answerRu = "Я просыпаюсь в семь.", answerKk = "Мен жетіде оянамын."
-        ))
-        courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 2,
-            type = TaskType.SENTENCE_BUILDING,
-            questionEn = "Build the sentence:", questionRu = "Составьте предложение:", questionKk = "Сөйлем құрыңыз:",
-            answerEn = "I eat breakfast every morning", answerRu = "I eat breakfast every morning", answerKk = "I eat breakfast every morning",
-            words = listOf("I", "eat", "breakfast", "every", "morning", "dinner"),
-            correctSentence = "I eat breakfast every morning"
-        ))
-        courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 3,
-            type = TaskType.MULTIPLE_CHOICE,
-            questionEn = "What does 'I go to bed' mean?", questionRu = "Что значит 'I go to bed'?", questionKk = "'I go to bed' нені білдіреді?",
-            answerEn = "I go to bed", answerRu = "Я ложусь спать", answerKk = "Мен ұйқыға жатамын",
-            options = listOf("Я ложусь спать", "Я встаю", "Я завтракаю", "Я иду в школу")
+        courseRepository.saveTask(cid, l2, Task(courseId = cid, lessonId = l2, order = 5,
+            type = TaskType.LISTEN_AND_WRITE,
+            questionEn = "See you on Friday",
+            answerEn = "See you on Friday", answerRu = "See you on Friday", answerKk = "See you on Friday"
         ))
     }
 

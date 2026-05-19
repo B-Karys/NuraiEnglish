@@ -247,13 +247,11 @@ private fun HomeCourseCard(
         CourseType.VOCABULARY -> MaterialTheme.colorScheme.primary
         CourseType.GRAMMAR    -> MaterialTheme.colorScheme.secondary
         CourseType.LISTENING  -> MaterialTheme.colorScheme.tertiary
-        CourseType.SPEAKING   -> MaterialTheme.colorScheme.error
     }
     val typeLabel = when (course.type) {
         CourseType.VOCABULARY -> strings.typeVocabulary
         CourseType.GRAMMAR    -> strings.typeGrammar
         CourseType.LISTENING  -> strings.typeListening
-        CourseType.SPEAKING   -> strings.typeSpeaking
     }
 
     Card(

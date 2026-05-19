@@ -29,6 +29,11 @@ class AuthRepository @Inject constructor(
     }
 
     val isLoggedIn: Boolean get() = auth.currentUser != null
+    val isEmailVerified: Boolean get() = auth.currentUser?.isEmailVerified == true
+    val currentEmail: String get() = auth.currentUser?.email ?: ""
+
+    suspend fun reloadCurrentUser() = runCatching { auth.currentUser?.reload()?.await() }
+    suspend fun resendVerificationEmail() = runCatching { auth.currentUser?.sendEmailVerification()?.await() }
 
     suspend fun register(email: String, password: String, displayName: String): Result<User> =
         runCatching {

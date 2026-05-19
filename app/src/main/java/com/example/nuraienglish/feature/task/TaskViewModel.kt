@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nuraienglish.core.data.model.AppLanguage
+import com.example.nuraienglish.core.data.model.nativeLanguage
 import com.example.nuraienglish.core.data.model.Lesson
 import com.example.nuraienglish.core.data.model.Task
 import com.example.nuraienglish.core.data.repository.CourseRepository
@@ -21,10 +22,11 @@ data class TaskUiState(
     val tasks: List<Task> = emptyList(),
     val currentIndex: Int = 0,
     val answerState: AnswerState = AnswerState.IDLE,
-    val earnedPoints: Int = 0,
+    val correctCount: Int = 0,           // number of correct answers this session
+    val lessonPointsAwarded: Int = 0,    // actual points given (0 if < 80% correct)
     val isLoading: Boolean = true,
     val isFinished: Boolean = false,
-    val lessonPointsReward: Int = 10
+    val lessonPointsReward: Int = 10     // max reward if user passes
 )
 
 @HiltViewModel
@@ -52,7 +54,14 @@ class TaskViewModel @Inject constructor(
 
     fun submitAnswer(userAnswer: String, language: AppLanguage) {
         val task = currentTask ?: return
-        val correct = task.answer(language).trim().equals(userAnswer.trim(), ignoreCase = true)
+        // LISTEN_AND_WRITE: user types the English phrase they heard — compare against answerEn.
+        // All other types: compare against the native-language answer (Russian/Kazakh).
+        val correctAnswer = when (task.type) {
+            com.example.nuraienglish.core.data.model.TaskType.LISTEN_AND_WRITE -> task.answerEn
+            else -> task.answer(language.nativeLanguage())
+        }
+        val correct = correctAnswer.normalizeAnswer()
+            .equals(userAnswer.normalizeAnswer(), ignoreCase = true)
         _state.value = _state.value.copy(answerState = if (correct) AnswerState.CORRECT else AnswerState.WRONG)
         if (!correct) {
             viewModelScope.launch { runCatching { reviewRepository.recordMistake(task) } }
@@ -61,15 +70,26 @@ class TaskViewModel @Inject constructor(
 
     fun next(language: AppLanguage) {
         val s = _state.value
-        val points = if (s.answerState == AnswerState.CORRECT) s.earnedPoints + 1 else s.earnedPoints
+        val correct = if (s.answerState == AnswerState.CORRECT) s.correctCount + 1 else s.correctCount
         val nextIndex = s.currentIndex + 1
         if (nextIndex >= s.tasks.size) {
+            // Award lesson points only if the user answered ≥ 80% correctly
+            val passed = s.tasks.isNotEmpty() && correct.toFloat() / s.tasks.size >= 0.8f
+            val reward = if (passed) s.lessonPointsReward else 0
             viewModelScope.launch {
-                runCatching { progressRepository.completeLesson(courseId, lessonId, s.lessonPointsReward) }
+                runCatching { progressRepository.completeLesson(courseId, lessonId, reward) }
             }
-            _state.value = s.copy(isFinished = true, earnedPoints = points, answerState = AnswerState.IDLE)
+            _state.value = s.copy(
+                isFinished = true,
+                correctCount = correct,
+                lessonPointsAwarded = reward,
+                answerState = AnswerState.IDLE
+            )
         } else {
-            _state.value = s.copy(currentIndex = nextIndex, answerState = AnswerState.IDLE, earnedPoints = points)
+            _state.value = s.copy(currentIndex = nextIndex, answerState = AnswerState.IDLE, correctCount = correct)
         }
     }
 }
+
+/** Strips trailing sentence-ending punctuation before comparing answers. */
+private fun String.normalizeAnswer() = trim().trimEnd('.', '!', '?')

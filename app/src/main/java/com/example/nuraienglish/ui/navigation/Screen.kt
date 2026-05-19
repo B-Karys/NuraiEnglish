@@ -3,6 +3,7 @@ package com.example.nuraienglish.ui.navigation
 sealed class Screen(val route: String) {
     data object Login : Screen("login")
     data object Register : Screen("register")
+    data object VerifyEmail : Screen("verify_email")
     data object Home : Screen("home")
     data object CourseList : Screen("courses")
     data object Progress : Screen("progress")
