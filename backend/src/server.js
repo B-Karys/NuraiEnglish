@@ -1,4 +1,8 @@
 require('dotenv').config();
+// Force IPv4 DNS — prevents ENETUNREACH/EHOSTUNREACH on IPv6-only routes
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
+
 const express = require('express');
 const nodemailer = require('nodemailer');
 
@@ -6,7 +10,10 @@ const app = express();
 app.use(express.json());
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,   // SSL on 465
+  family: 4,      // force IPv4 socket
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_PASS, // App Password, not your Gmail password

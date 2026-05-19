@@ -23,7 +23,7 @@ class VerificationRepository @Inject constructor() {
 
     // Change to your machine's IP when testing on a physical device.
     // 10.0.2.2 is the Android emulator's alias for localhost.
-    private val baseUrl = "http://10.0.2.2:3000"
+    private val baseUrl = "https://nuraienglish.onrender.com"
 
     suspend fun sendCode(email: String): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
