@@ -18,6 +18,7 @@ import javax.inject.Inject
 data class AdminUiState(
     val courses: List<Course> = emptyList(),
     val lessonsByCourse: Map<String, List<Lesson>> = emptyMap(),
+    val tasksByLesson: Map<String, List<Task>> = emptyMap(),
     val isSaving: Boolean = false,
     val successMessage: String? = null,
     val error: String? = null
@@ -51,7 +52,8 @@ class AdminViewModel @Inject constructor(
     fun saveCourse(
         id: String, titleEn: String, titleRu: String, titleKk: String,
         descEn: String, descRu: String, descKk: String,
-        level: String, type: CourseType, lessonCount: Int, pointsToUnlock: Int
+        level: String, type: CourseType, lessonCount: Int, pointsToUnlock: Int,
+        successMsg: String = "Saved!"
     ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isSaving = true, error = null)
@@ -64,7 +66,7 @@ class AdminViewModel @Inject constructor(
                     )
                 )
             }.onSuccess {
-                _state.value = _state.value.copy(isSaving = false, successMessage = "Course saved!")
+                _state.value = _state.value.copy(isSaving = false, successMessage = successMsg)
                 courseRepository.syncCourses()
             }.onFailure {
                 _state.value = _state.value.copy(isSaving = false, error = it.message)
@@ -72,25 +74,48 @@ class AdminViewModel @Inject constructor(
         }
     }
 
-    fun saveLesson(courseId: String, id: String, titleEn: String, titleRu: String, titleKk: String, order: Int, taskCount: Int, points: Int) {
+    fun saveLesson(
+        courseId: String, id: String,
+        titleEn: String, titleRu: String, titleKk: String,
+        order: Int, taskCount: Int, points: Int,
+        successMsg: String = "Saved!"
+    ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isSaving = true, error = null)
             runCatching {
-                courseRepository.saveLesson(courseId, Lesson(id = id, courseId = courseId, titleEn = titleEn, titleRu = titleRu, titleKk = titleKk, order = order, taskCount = taskCount, pointsReward = points))
+                courseRepository.saveLesson(courseId, Lesson(
+                    id = id, courseId = courseId,
+                    titleEn = titleEn, titleRu = titleRu, titleKk = titleKk,
+                    order = order, taskCount = taskCount, pointsReward = points
+                ))
             }.onSuccess {
-                _state.value = _state.value.copy(isSaving = false, successMessage = "Lesson saved!")
+                _state.value = _state.value.copy(isSaving = false, successMessage = successMsg)
             }.onFailure {
                 _state.value = _state.value.copy(isSaving = false, error = it.message)
             }
         }
     }
 
-    fun saveTask(courseId: String, lessonId: String, task: Task) {
+    fun saveTask(courseId: String, lessonId: String, task: Task, successMsg: String = "Saved!") {
         viewModelScope.launch {
             _state.value = _state.value.copy(isSaving = true, error = null)
             runCatching { courseRepository.saveTask(courseId, lessonId, task) }
-                .onSuccess { _state.value = _state.value.copy(isSaving = false, successMessage = "Task saved!") }
+                .onSuccess {
+                    _state.value = _state.value.copy(isSaving = false, successMessage = successMsg)
+                    // Refresh the task list for this lesson so edits appear immediately
+                    loadTasks(courseId, lessonId)
+                }
                 .onFailure { _state.value = _state.value.copy(isSaving = false, error = it.message) }
+        }
+    }
+
+    fun loadTasks(courseId: String, lessonId: String) {
+        if (lessonId.isBlank() || courseId.isBlank()) return
+        viewModelScope.launch {
+            val tasks = runCatching { courseRepository.getTasks(courseId, lessonId) }.getOrDefault(emptyList())
+            _state.value = _state.value.copy(
+                tasksByLesson = _state.value.tasksByLesson + (lessonId to tasks)
+            )
         }
     }
 

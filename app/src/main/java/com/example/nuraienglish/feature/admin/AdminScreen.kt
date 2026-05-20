@@ -14,9 +14,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.nuraienglish.core.data.model.AppLanguage
+import com.example.nuraienglish.core.data.model.Course
 import com.example.nuraienglish.core.data.model.CourseType
+import com.example.nuraienglish.core.data.model.Lesson
 import com.example.nuraienglish.core.data.model.Task
 import com.example.nuraienglish.core.data.model.TaskType
+import com.example.nuraienglish.core.ui.UiStrings
+import com.example.nuraienglish.core.ui.uiStrings
 
 @Composable
 fun AdminScreen(
@@ -26,7 +30,8 @@ fun AdminScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Add Course", "Add Lesson", "Add Task", "Seed Data")
+    val strings = language.uiStrings()
+    val tabs = listOf(strings.adminAddCourse, strings.adminAddLesson, strings.adminAddTask, strings.adminSeedData)
 
     LaunchedEffect(state.successMessage, state.error) {
         if (state.successMessage != null || state.error != null) {
@@ -38,7 +43,7 @@ fun AdminScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Admin Panel", fontWeight = FontWeight.Bold) },
+                title = { Text(strings.adminPanel, fontWeight = FontWeight.Bold) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }
             )
         },
@@ -52,293 +57,381 @@ fun AdminScreen(
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            TabRow(selectedTabIndex = selectedTab) {
+            ScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 0.dp) {
                 tabs.forEachIndexed { i, title ->
                     Tab(selected = selectedTab == i, onClick = { selectedTab = i }, text = { Text(title) })
                 }
             }
             when (selectedTab) {
-                0 -> AddCourseTab(isSaving = state.isSaving, onSave = { t, r, k, de, dr, dk, l, ty, lc, pt ->
-                    viewModel.saveCourse("", t, r, k, de, dr, dk, l, ty, lc, pt)
-                })
-                1 -> AddLessonTab(
-                    courses = state.courses.map { it.id to it.title(language) },
+                0 -> CourseTab(
+                    strings = strings,
+                    language = language,
+                    courses = state.courses,
                     isSaving = state.isSaving,
-                    onSave = { cid, te, tr, tk, ord, tc, pts ->
-                        viewModel.saveLesson(cid, "", te, tr, tk, ord, tc, pts)
+                    onSave = { id, te, tr, tk, de, dr, dk, l, ty, lc, pt ->
+                        viewModel.saveCourse(id, te, tr, tk, de, dr, dk, l, ty, lc, pt, strings.adminSaved)
                     }
                 )
-                2 -> AddTaskTab(
-                    courses = state.courses.map { it.id to it.title(language) },
-                    lessonsByCourse = state.lessonsByCourse.mapValues { (_, lessons) ->
-                        lessons.map { it.id to it.title(language) }
-                    },
+                1 -> LessonTab(
+                    strings = strings,
+                    language = language,
+                    courses = state.courses,
+                    lessonsByCourse = state.lessonsByCourse,
                     isSaving = state.isSaving,
-                    onSave = { cid, lid, task -> viewModel.saveTask(cid, lid, task) }
+                    onSave = { cid, id, te, tr, tk, ord, tc, pts ->
+                        viewModel.saveLesson(cid, id, te, tr, tk, ord, tc, pts, strings.adminSaved)
+                    }
                 )
-                3 -> SeedDataTab(isSaving = state.isSaving, onSeed = viewModel::seedSampleData)
+                2 -> TaskTab(
+                    strings = strings,
+                    language = language,
+                    courses = state.courses,
+                    lessonsByCourse = state.lessonsByCourse,
+                    tasksByLesson = state.tasksByLesson,
+                    isSaving = state.isSaving,
+                    onLoadTasks = { cid, lid -> viewModel.loadTasks(cid, lid) },
+                    onSave = { cid, lid, task ->
+                        viewModel.saveTask(cid, lid, task, strings.adminSaved)
+                    }
+                )
+                3 -> SeedDataTab(strings = strings, isSaving = state.isSaving, onSeed = viewModel::seedSampleData)
             }
         }
     }
 }
 
+// ─── Course Tab ───────────────────────────────────────────────────────────────
+
 @Composable
-private fun AddCourseTab(
+private fun CourseTab(
+    strings: UiStrings,
+    language: AppLanguage,
+    courses: List<Course>,
     isSaving: Boolean,
-    onSave: (String, String, String, String, String, String, String, CourseType, Int, Int) -> Unit
+    onSave: (id: String, te: String, tr: String, tk: String, de: String, dr: String, dk: String, level: String, type: CourseType, lessonCount: Int, pointsToUnlock: Int) -> Unit
 ) {
-    var titleEn by remember { mutableStateOf("") }
-    var titleRu by remember { mutableStateOf("") }
-    var titleKk by remember { mutableStateOf("") }
-    var descEn by remember { mutableStateOf("") }
-    var descRu by remember { mutableStateOf("") }
-    var descKk by remember { mutableStateOf("") }
-    var level by remember { mutableStateOf("A1") }
-    var type by remember { mutableStateOf(CourseType.VOCABULARY) }
-    var lessonCount by remember { mutableStateOf("0") }
-    var points by remember { mutableStateOf("0") }
+    var editing by remember { mutableStateOf<Course?>(null) }
+    var titleEn by remember(editing) { mutableStateOf(editing?.titleEn ?: "") }
+    var titleRu by remember(editing) { mutableStateOf(editing?.titleRu ?: "") }
+    var titleKk by remember(editing) { mutableStateOf(editing?.titleKk ?: "") }
+    var descEn by remember(editing) { mutableStateOf(editing?.descriptionEn ?: "") }
+    var descRu by remember(editing) { mutableStateOf(editing?.descriptionRu ?: "") }
+    var descKk by remember(editing) { mutableStateOf(editing?.descriptionKk ?: "") }
+    var level by remember(editing) { mutableStateOf(editing?.level ?: "A1") }
+    var type by remember(editing) { mutableStateOf(editing?.type ?: CourseType.VOCABULARY) }
+    var lessonCount by remember(editing) { mutableStateOf(editing?.lessonCount?.toString() ?: "0") }
+    var points by remember(editing) { mutableStateOf(editing?.pointsToUnlock?.toString() ?: "0") }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("New Course", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        listOf("English title" to titleEn to { v: String -> titleEn = v },
-               "Russian title" to titleRu to { v: String -> titleRu = v },
-               "Kazakh title" to titleKk to { v: String -> titleKk = v },
-               "English description" to descEn to { v: String -> descEn = v },
-               "Russian description" to descRu to { v: String -> descRu = v },
-               "Kazakh description" to descKk to { v: String -> descKk = v }
-        ).forEach { (labelValue, onChange) ->
-            OutlinedTextField(value = labelValue.second, onValueChange = onChange, label = { Text(labelValue.first) }, modifier = Modifier.fillMaxWidth())
+        // Existing courses list
+        if (courses.isNotEmpty()) {
+            SectionLabel(strings.courses)
+            courses.forEach { course ->
+                ExistingItemCard(
+                    title = course.title(language),
+                    subtitle = "${course.level} · ${courseTypeLabel(course.type, strings)}",
+                    editLabel = strings.adminEdit,
+                    onEdit = { editing = course }
+                )
+            }
+            HorizontalDivider(Modifier.padding(vertical = 4.dp))
         }
+
+        // Form header
+        Text(
+            if (editing != null) strings.adminEditCourse else strings.adminNewCourse,
+            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
+        )
+
+        OutlinedTextField(titleEn, { titleEn = it }, label = { Text("English title") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(titleRu, { titleRu = it }, label = { Text("Russian title") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(titleKk, { titleKk = it }, label = { Text("Kazakh title") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(descEn, { descEn = it }, label = { Text("English description") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(descRu, { descRu = it }, label = { Text("Russian description") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(descKk, { descKk = it }, label = { Text("Kazakh description") }, modifier = Modifier.fillMaxWidth())
+
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(value = level, onValueChange = { level = it }, label = { Text("Level (A1, A2…)") }, modifier = Modifier.weight(1f), singleLine = true)
-            OutlinedTextField(value = lessonCount, onValueChange = { lessonCount = it }, label = { Text("Lessons") }, modifier = Modifier.weight(1f), singleLine = true)
+            OutlinedTextField(level, { level = it }, label = { Text("Level") }, modifier = Modifier.weight(1f), singleLine = true)
+            OutlinedTextField(lessonCount, { lessonCount = it }, label = { Text("Lessons") }, modifier = Modifier.weight(1f), singleLine = true)
         }
-        OutlinedTextField(value = points, onValueChange = { points = it }, label = { Text("Points to unlock") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        Text("Type", style = MaterialTheme.typography.labelLarge)
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        OutlinedTextField(points, { points = it }, label = { Text("Points to unlock") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+
+        Text(strings.adminCourseType, style = MaterialTheme.typography.labelLarge)
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CourseType.entries.forEach { t ->
-                val label = when (t) {
-                    CourseType.VOCABULARY -> "Vocabulary"
-                    CourseType.GRAMMAR -> "Grammar"
-                    CourseType.LISTENING -> "Listening"
-                }
-                FilterChip(selected = type == t, onClick = { type = t }, label = { Text(label) })
-            }
-        }
-        Button(
-            onClick = { onSave(titleEn, titleRu, titleKk, descEn, descRu, descKk, level, type, lessonCount.toIntOrNull() ?: 0, points.toIntOrNull() ?: 0) },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            enabled = !isSaving && titleEn.isNotBlank()
-        ) {
-            if (isSaving) CircularProgressIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-            else Text("Save Course")
-        }
-    }
-}
-
-@Composable
-private fun AddLessonTab(
-    courses: List<Pair<String, String>>,
-    isSaving: Boolean,
-    onSave: (String, String, String, String, Int, Int, Int) -> Unit
-) {
-    var selectedCourse by remember { mutableStateOf(courses.firstOrNull()?.first ?: "") }
-    var titleEn by remember { mutableStateOf("") }
-    var titleRu by remember { mutableStateOf("") }
-    var titleKk by remember { mutableStateOf("") }
-    var order by remember { mutableStateOf("1") }
-    var taskCount by remember { mutableStateOf("5") }
-    var points by remember { mutableStateOf("10") }
-    var expanded by remember { mutableStateOf(false) }
-
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text("New Lesson", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-            OutlinedTextField(
-                value = courses.firstOrNull { it.first == selectedCourse }?.second ?: "Select course",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Course") },
-                modifier = Modifier.fillMaxWidth().menuAnchor(),
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) }
-            )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                courses.forEach { (id, title) ->
-                    DropdownMenuItem(text = { Text(title) }, onClick = { selectedCourse = id; expanded = false })
-                }
+                FilterChip(selected = type == t, onClick = { type = t }, label = { Text(courseTypeLabel(t, strings)) })
             }
         }
 
-        OutlinedTextField(value = titleEn, onValueChange = { titleEn = it }, label = { Text("English title") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = titleRu, onValueChange = { titleRu = it }, label = { Text("Russian title") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = titleKk, onValueChange = { titleKk = it }, label = { Text("Kazakh title") }, modifier = Modifier.fillMaxWidth())
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(value = order, onValueChange = { order = it }, label = { Text("Order") }, modifier = Modifier.weight(1f), singleLine = true)
-            OutlinedTextField(value = taskCount, onValueChange = { taskCount = it }, label = { Text("Task count") }, modifier = Modifier.weight(1f), singleLine = true)
-            OutlinedTextField(value = points, onValueChange = { points = it }, label = { Text("Points") }, modifier = Modifier.weight(1f), singleLine = true)
-        }
-        Button(
-            onClick = { onSave(selectedCourse, titleEn, titleRu, titleKk, order.toIntOrNull() ?: 1, taskCount.toIntOrNull() ?: 5, points.toIntOrNull() ?: 10) },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            enabled = !isSaving && titleEn.isNotBlank() && selectedCourse.isNotBlank()
-        ) {
-            if (isSaving) CircularProgressIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-            else Text("Save Lesson")
-        }
+        SaveRow(
+            strings = strings,
+            isSaving = isSaving,
+            isEditing = editing != null,
+            saveLabel = strings.adminSaveCourse,
+            enabled = titleEn.isNotBlank(),
+            onCancel = { editing = null },
+            onSave = {
+                onSave(editing?.id ?: "", titleEn, titleRu, titleKk, descEn, descRu, descKk, level, type,
+                    lessonCount.toIntOrNull() ?: 0, points.toIntOrNull() ?: 0)
+                editing = null
+            }
+        )
     }
 }
 
+// ─── Lesson Tab ───────────────────────────────────────────────────────────────
+
 @Composable
-private fun AddTaskTab(
-    courses: List<Pair<String, String>>,
-    lessonsByCourse: Map<String, List<Pair<String, String>>>,
+private fun LessonTab(
+    strings: UiStrings,
+    language: AppLanguage,
+    courses: List<Course>,
+    lessonsByCourse: Map<String, List<Lesson>>,
     isSaving: Boolean,
-    onSave: (String, String, Task) -> Unit
+    onSave: (courseId: String, id: String, te: String, tr: String, tk: String, order: Int, taskCount: Int, points: Int) -> Unit
 ) {
-    var selectedCourse by remember { mutableStateOf(courses.firstOrNull()?.first ?: "") }
-    var selectedLesson by remember { mutableStateOf("") }
-    var taskType by remember { mutableStateOf(TaskType.WORD_TRANSLATION) }
-    var questionEn by remember { mutableStateOf("") }
-    var answerEn by remember { mutableStateOf("") }
-    var answerRu by remember { mutableStateOf("") }
-    var answerKk by remember { mutableStateOf("") }
-    var options by remember { mutableStateOf("") }
-    var words by remember { mutableStateOf("") }
-    var correctSentence by remember { mutableStateOf("") }
+    var selectedCourse by remember { mutableStateOf(courses.firstOrNull()?.id ?: "") }
     var courseExpanded by remember { mutableStateOf(false) }
-    var lessonExpanded by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<Lesson?>(null) }
+
+    var titleEn by remember(editing) { mutableStateOf(editing?.titleEn ?: "") }
+    var titleRu by remember(editing) { mutableStateOf(editing?.titleRu ?: "") }
+    var titleKk by remember(editing) { mutableStateOf(editing?.titleKk ?: "") }
+    var order by remember(editing) { mutableStateOf(editing?.order?.toString() ?: "1") }
+    var taskCount by remember(editing) { mutableStateOf(editing?.taskCount?.toString() ?: "5") }
+    var points by remember(editing) { mutableStateOf(editing?.pointsReward?.toString() ?: "10") }
 
     val lessons = lessonsByCourse[selectedCourse] ?: emptyList()
-
-    // Reset lesson selection when course changes
-    LaunchedEffect(selectedCourse) { selectedLesson = lessons.firstOrNull()?.first ?: "" }
-    LaunchedEffect(lessons) { if (selectedLesson.isBlank()) selectedLesson = lessons.firstOrNull()?.first ?: "" }
+    LaunchedEffect(lessons) { if (editing != null && lessons.none { it.id == editing!!.id }) editing = null }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("New Task", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        // Course selector (always visible)
+        CourseDropdown(
+            courses = courses, selectedId = selectedCourse, language = language,
+            expanded = courseExpanded, onExpandedChange = { courseExpanded = it },
+            onSelect = { selectedCourse = it; courseExpanded = false; editing = null }
+        )
 
-        // Course dropdown
-        ExposedDropdownMenuBox(expanded = courseExpanded, onExpandedChange = { courseExpanded = it }) {
-            OutlinedTextField(
-                value = courses.firstOrNull { it.first == selectedCourse }?.second ?: "Select course",
-                onValueChange = {}, readOnly = true, label = { Text("Course") },
-                modifier = Modifier.fillMaxWidth().menuAnchor(),
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(courseExpanded) }
-            )
-            ExposedDropdownMenu(expanded = courseExpanded, onDismissRequest = { courseExpanded = false }) {
-                courses.forEach { (id, title) ->
-                    DropdownMenuItem(text = { Text(title) }, onClick = { selectedCourse = id; courseExpanded = false })
-                }
+        // Existing lessons for this course
+        if (lessons.isNotEmpty()) {
+            SectionLabel(strings.lessons)
+            lessons.forEach { lesson ->
+                ExistingItemCard(
+                    title = lesson.title(language),
+                    subtitle = "${strings.taskWord} ${lesson.taskCount} · ${lesson.pointsReward} ${strings.pts}",
+                    editLabel = strings.adminEdit,
+                    onEdit = { editing = lesson; selectedCourse = lesson.courseId }
+                )
             }
+            HorizontalDivider(Modifier.padding(vertical = 4.dp))
         }
 
-        // Lesson dropdown — populated from actual lessons in Room
+        Text(
+            if (editing != null) strings.adminEditLesson else strings.adminNewLesson,
+            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
+        )
+
+        OutlinedTextField(titleEn, { titleEn = it }, label = { Text("English title") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(titleRu, { titleRu = it }, label = { Text("Russian title") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(titleKk, { titleKk = it }, label = { Text("Kazakh title") }, modifier = Modifier.fillMaxWidth())
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(order, { order = it }, label = { Text("Order") }, modifier = Modifier.weight(1f), singleLine = true)
+            OutlinedTextField(taskCount, { taskCount = it }, label = { Text("Tasks") }, modifier = Modifier.weight(1f), singleLine = true)
+            OutlinedTextField(points, { points = it }, label = { Text("Points") }, modifier = Modifier.weight(1f), singleLine = true)
+        }
+
+        SaveRow(
+            strings = strings,
+            isSaving = isSaving,
+            isEditing = editing != null,
+            saveLabel = strings.adminSaveLesson,
+            enabled = titleEn.isNotBlank() && selectedCourse.isNotBlank(),
+            onCancel = { editing = null },
+            onSave = {
+                onSave(selectedCourse, editing?.id ?: "", titleEn, titleRu, titleKk,
+                    order.toIntOrNull() ?: 1, taskCount.toIntOrNull() ?: 5, points.toIntOrNull() ?: 10)
+                editing = null
+            }
+        )
+    }
+}
+
+// ─── Task Tab ─────────────────────────────────────────────────────────────────
+
+@Composable
+private fun TaskTab(
+    strings: UiStrings,
+    language: AppLanguage,
+    courses: List<Course>,
+    lessonsByCourse: Map<String, List<Lesson>>,
+    tasksByLesson: Map<String, List<Task>>,
+    isSaving: Boolean,
+    onLoadTasks: (courseId: String, lessonId: String) -> Unit,
+    onSave: (courseId: String, lessonId: String, task: Task) -> Unit
+) {
+    var selectedCourse by remember { mutableStateOf(courses.firstOrNull()?.id ?: "") }
+    var selectedLesson by remember { mutableStateOf("") }
+    var courseExpanded by remember { mutableStateOf(false) }
+    var lessonExpanded by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<Task?>(null) }
+
+    var taskType by remember(editing) { mutableStateOf(editing?.type ?: TaskType.WORD_TRANSLATION) }
+    var questionEn by remember(editing) { mutableStateOf(editing?.questionEn ?: "") }
+    var questionRu by remember(editing) { mutableStateOf(editing?.questionRu ?: "") }
+    var questionKk by remember(editing) { mutableStateOf(editing?.questionKk ?: "") }
+    var answerEn by remember(editing) { mutableStateOf(editing?.answerEn ?: "") }
+    var answerRu by remember(editing) { mutableStateOf(editing?.answerRu ?: "") }
+    var answerKk by remember(editing) { mutableStateOf(editing?.answerKk ?: "") }
+    var options by remember(editing) { mutableStateOf(editing?.options?.joinToString(", ") ?: "") }
+    var words by remember(editing) { mutableStateOf(editing?.words?.joinToString(", ") ?: "") }
+    var correctSentence by remember(editing) { mutableStateOf(editing?.correctSentence ?: "") }
+
+    val lessons = lessonsByCourse[selectedCourse] ?: emptyList()
+    val existingTasks = tasksByLesson[selectedLesson] ?: emptyList()
+
+    // Sync selectedLesson when lessons load
+    LaunchedEffect(selectedCourse) { selectedLesson = ""; editing = null }
+    LaunchedEffect(lessons) {
+        if (selectedLesson.isBlank()) selectedLesson = lessons.firstOrNull()?.id ?: ""
+    }
+    // Load tasks whenever lesson selection changes
+    LaunchedEffect(selectedLesson) {
+        if (selectedLesson.isNotBlank()) onLoadTasks(selectedCourse, selectedLesson)
+    }
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Course dropdown
+        CourseDropdown(
+            courses = courses, selectedId = selectedCourse, language = language,
+            expanded = courseExpanded, onExpandedChange = { courseExpanded = it },
+            onSelect = { selectedCourse = it; courseExpanded = false }
+        )
+
+        // Lesson dropdown
         ExposedDropdownMenuBox(expanded = lessonExpanded, onExpandedChange = { lessonExpanded = it }) {
             OutlinedTextField(
-                value = lessons.firstOrNull { it.first == selectedLesson }?.second
-                    ?: if (lessons.isEmpty()) "No lessons yet — add one first" else "Select lesson",
+                value = lessons.firstOrNull { it.id == selectedLesson }?.title(language)
+                    ?: if (lessons.isEmpty()) strings.adminNone else "Select lesson",
                 onValueChange = {}, readOnly = true, label = { Text("Lesson") },
                 modifier = Modifier.fillMaxWidth().menuAnchor(),
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(lessonExpanded) },
                 enabled = lessons.isNotEmpty()
             )
             ExposedDropdownMenu(expanded = lessonExpanded, onDismissRequest = { lessonExpanded = false }) {
-                lessons.forEach { (id, title) ->
-                    DropdownMenuItem(text = { Text(title) }, onClick = { selectedLesson = id; lessonExpanded = false })
+                lessons.forEach { lesson ->
+                    DropdownMenuItem(
+                        text = { Text(lesson.title(language)) },
+                        onClick = { selectedLesson = lesson.id; lessonExpanded = false; editing = null }
+                    )
                 }
             }
         }
 
-        Text("Task type", style = MaterialTheme.typography.labelLarge)
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        // Existing tasks list
+        if (existingTasks.isNotEmpty()) {
+            SectionLabel(strings.tasks)
+            existingTasks.forEach { task ->
+                ExistingItemCard(
+                    title = task.questionEn.take(50).let { if (task.questionEn.length > 50) "$it…" else it },
+                    subtitle = task.type.name.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() },
+                    editLabel = strings.adminEdit,
+                    onEdit = { editing = task }
+                )
+            }
+            HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        }
+
+        // Form
+        Text(
+            if (editing != null) strings.adminEditTask else strings.adminNewTask,
+            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
+        )
+
+        Text(strings.adminTaskType, style = MaterialTheme.typography.labelLarge)
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TaskType.entries.forEach { t ->
-                val label = when (t) {
-                    TaskType.WORD_TRANSLATION -> "Word"
-                    TaskType.SENTENCE_TRANSLATION -> "Sentence"
-                    TaskType.MULTIPLE_CHOICE -> "Multiple choice"
-                    TaskType.SENTENCE_BUILDING -> "Build"
-                    TaskType.LISTEN_AND_TRANSLATE -> "Listen + translate"
-                    TaskType.LISTEN_AND_WRITE -> "Listen + write"
-                }
-                FilterChip(selected = taskType == t, onClick = { taskType = t }, label = { Text(label) })
+                FilterChip(selected = taskType == t, onClick = { taskType = t }, label = { Text(taskTypeLabel(t, strings)) })
             }
         }
 
-        OutlinedTextField(value = questionEn, onValueChange = { questionEn = it }, label = { Text("Question (English)") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = answerEn, onValueChange = { answerEn = it }, label = { Text("Answer (English)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        OutlinedTextField(value = answerRu, onValueChange = { answerRu = it }, label = { Text("Answer (Russian)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        OutlinedTextField(value = answerKk, onValueChange = { answerKk = it }, label = { Text("Answer (Kazakh)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(questionEn, { questionEn = it }, label = { Text("Question (English)") }, modifier = Modifier.fillMaxWidth())
+
+        // Native-language question hints (for types that show them)
+        if (taskType == TaskType.SENTENCE_BUILDING || taskType == TaskType.SENTENCE_TRANSLATION ||
+            taskType == TaskType.WORD_TRANSLATION || taskType == TaskType.MULTIPLE_CHOICE) {
+            OutlinedTextField(questionRu, { questionRu = it }, label = { Text("Question (Russian)") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(questionKk, { questionKk = it }, label = { Text("Question (Kazakh)") }, modifier = Modifier.fillMaxWidth())
+        }
+
+        OutlinedTextField(answerEn, { answerEn = it }, label = { Text("Answer (English)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(answerRu, { answerRu = it }, label = { Text("Answer (Russian)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(answerKk, { answerKk = it }, label = { Text("Answer (Kazakh)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
 
         if (taskType == TaskType.MULTIPLE_CHOICE) {
-            OutlinedTextField(value = options, onValueChange = { options = it }, label = { Text("Options (comma separated)") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(options, { options = it }, label = { Text("Options (comma separated)") }, modifier = Modifier.fillMaxWidth())
         }
         if (taskType == TaskType.SENTENCE_BUILDING) {
-            OutlinedTextField(value = words, onValueChange = { words = it }, label = { Text("Words (comma separated)") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = correctSentence, onValueChange = { correctSentence = it }, label = { Text("Correct sentence") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(words, { words = it }, label = { Text("Words (comma separated)") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(correctSentence, { correctSentence = it }, label = { Text("Correct sentence") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         }
 
-        Button(
-            onClick = {
+        SaveRow(
+            strings = strings,
+            isSaving = isSaving,
+            isEditing = editing != null,
+            saveLabel = strings.adminSaveTask,
+            enabled = questionEn.isNotBlank() && selectedLesson.isNotBlank(),
+            onCancel = { editing = null },
+            onSave = {
                 onSave(selectedCourse, selectedLesson, Task(
-                    lessonId = selectedLesson, courseId = selectedCourse, type = taskType,
-                    questionEn = questionEn, answerEn = answerEn, answerRu = answerRu, answerKk = answerKk,
+                    id = editing?.id ?: "",
+                    lessonId = selectedLesson, courseId = selectedCourse,
+                    type = taskType, order = editing?.order ?: (existingTasks.size + 1),
+                    questionEn = questionEn, questionRu = questionRu, questionKk = questionKk,
+                    answerEn = answerEn, answerRu = answerRu, answerKk = answerKk,
                     options = options.split(",").map { it.trim() }.filter { it.isNotBlank() },
                     words = words.split(",").map { it.trim() }.filter { it.isNotBlank() },
                     correctSentence = correctSentence
                 ))
-            },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            enabled = !isSaving && questionEn.isNotBlank() && selectedLesson.isNotBlank()
-        ) {
-            if (isSaving) CircularProgressIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-            else Text("Save Task")
-        }
+                editing = null
+            }
+        )
     }
 }
 
+// ─── Seed Data Tab ────────────────────────────────────────────────────────────
+
 @Composable
-private fun SeedDataTab(isSaving: Boolean, onSeed: () -> Unit) {
+private fun SeedDataTab(strings: UiStrings, isSaving: Boolean, onSeed: () -> Unit) {
     Column(
         Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(24.dp))
-
-        Text("Sample Data", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-
+        Text(strings.adminSampleDataTitle, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(
-            "Creates 3 complete courses — 2 lessons each, 5 focused tasks per lesson.",
+            "3 ${strings.courses.lowercase()} · 2 ${strings.lessons.lowercase()} · 5 ${strings.tasks.lowercase()}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SeedRow("📖", "Vocabulary A1", "2 lessons · word translation only")
-                SeedRow("📝", "Grammar A1",    "2 lessons · fill-in-the-blank + sentence building")
-                SeedRow("👂", "Listening A2",  "2 lessons · listen+translate & listen+write only")
+                SeedRow("📖", "Vocabulary A1", "2 ${strings.lessons.lowercase()} · ${strings.typeVocabulary.lowercase()}")
+                SeedRow("📝", "Grammar A1",    "2 ${strings.lessons.lowercase()} · ${strings.typeGrammar.lowercase()}")
+                SeedRow("👂", "Listening A2",  "2 ${strings.lessons.lowercase()} · ${strings.typeListening.lowercase()}")
             }
         }
-
         Spacer(Modifier.height(8.dp))
-
         Button(
             onClick = onSeed,
             modifier = Modifier.fillMaxWidth().height(54.dp),
@@ -347,18 +440,108 @@ private fun SeedDataTab(isSaving: Boolean, onSeed: () -> Unit) {
             if (isSaving) {
                 CircularProgressIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
                 Spacer(Modifier.width(12.dp))
-                Text("Creating sample data…")
+                Text(strings.adminCreating)
             } else {
-                Text("Create Sample Data", style = MaterialTheme.typography.labelLarge)
+                Text(strings.adminCreateSampleData, style = MaterialTheme.typography.labelLarge)
             }
         }
-
-        Text(
-            "Note: you can tap this multiple times — each tap creates a new set with different IDs.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
+}
+
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(text, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun ExistingItemCard(
+    title: String,
+    subtitle: String,
+    editLabel: String,
+    onEdit: () -> Unit
+) {
+    Card(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            TextButton(onClick = onEdit) { Text(editLabel) }
+        }
+    }
+}
+
+@Composable
+private fun SaveRow(
+    strings: UiStrings,
+    isSaving: Boolean,
+    isEditing: Boolean,
+    saveLabel: String,
+    enabled: Boolean,
+    onCancel: () -> Unit,
+    onSave: () -> Unit
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (isEditing) {
+            OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f).height(50.dp)) {
+                Text(strings.adminCancel)
+            }
+        }
+        Button(
+            onClick = onSave,
+            modifier = Modifier.weight(if (isEditing) 2f else 1f).height(50.dp),
+            enabled = !isSaving && enabled
+        ) {
+            if (isSaving) CircularProgressIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+            else Text(saveLabel)
+        }
+    }
+}
+
+@Composable
+private fun CourseDropdown(
+    courses: List<Course>,
+    selectedId: String,
+    language: AppLanguage,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onSelect: (String) -> Unit
+) {
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = onExpandedChange) {
+        OutlinedTextField(
+            value = courses.firstOrNull { it.id == selectedId }?.title(language) ?: "Select course",
+            onValueChange = {}, readOnly = true, label = { Text("Course") },
+            modifier = Modifier.fillMaxWidth().menuAnchor(),
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) }
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
+            courses.forEach { course ->
+                DropdownMenuItem(text = { Text(course.title(language)) }, onClick = { onSelect(course.id) })
+            }
+        }
+    }
+}
+
+private fun courseTypeLabel(type: CourseType, strings: UiStrings) = when (type) {
+    CourseType.VOCABULARY -> strings.typeVocabulary
+    CourseType.GRAMMAR    -> strings.typeGrammar
+    CourseType.LISTENING  -> strings.typeListening
+}
+
+private fun taskTypeLabel(type: TaskType, strings: UiStrings) = when (type) {
+    TaskType.WORD_TRANSLATION     -> "Word"
+    TaskType.SENTENCE_TRANSLATION -> "Sentence"
+    TaskType.MULTIPLE_CHOICE      -> "Multiple choice"
+    TaskType.SENTENCE_BUILDING    -> "Build"
+    TaskType.LISTEN_AND_TRANSLATE -> strings.listenAndTranslate
+    TaskType.LISTEN_AND_WRITE     -> strings.listenAndWrite
 }
 
 @Composable
