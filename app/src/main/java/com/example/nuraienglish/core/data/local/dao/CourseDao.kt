@@ -15,6 +15,9 @@ interface CourseDao {
     @Upsert
     suspend fun upsertAll(courses: List<CachedCourseEntity>)
 
+    @Query("DELETE FROM courses WHERE id = :id")
+    suspend fun deleteById(id: String)
+
     @Query("DELETE FROM courses")
     suspend fun deleteAll()
 }

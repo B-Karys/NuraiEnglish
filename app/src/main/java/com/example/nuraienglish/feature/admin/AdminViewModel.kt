@@ -119,6 +119,40 @@ class AdminViewModel @Inject constructor(
         }
     }
 
+    fun deleteCourse(courseId: String, successMsg: String = "Deleted!") {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isSaving = true, error = null)
+            runCatching { courseRepository.deleteCourse(courseId) }
+                .onSuccess {
+                    _state.value = _state.value.copy(isSaving = false, successMessage = successMsg)
+                }
+                .onFailure { _state.value = _state.value.copy(isSaving = false, error = it.message) }
+        }
+    }
+
+    fun deleteLesson(courseId: String, lessonId: String, successMsg: String = "Deleted!") {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isSaving = true, error = null)
+            runCatching { courseRepository.deleteLesson(courseId, lessonId) }
+                .onSuccess {
+                    _state.value = _state.value.copy(isSaving = false, successMessage = successMsg)
+                }
+                .onFailure { _state.value = _state.value.copy(isSaving = false, error = it.message) }
+        }
+    }
+
+    fun deleteTask(courseId: String, lessonId: String, taskId: String, successMsg: String = "Deleted!") {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isSaving = true, error = null)
+            runCatching { courseRepository.deleteTask(courseId, lessonId, taskId) }
+                .onSuccess {
+                    _state.value = _state.value.copy(isSaving = false, successMessage = successMsg)
+                    loadTasks(courseId, lessonId)
+                }
+                .onFailure { _state.value = _state.value.copy(isSaving = false, error = it.message) }
+        }
+    }
+
     fun clearMessage() { _state.value = _state.value.copy(successMessage = null, error = null) }
 
     // ─── Sample Data Seeding ──────────────────────────────────────────────────

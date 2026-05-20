@@ -109,6 +109,10 @@ data class UiStrings(
     val adminCreateSampleData: String,
     val adminCreating: String,
     val adminNone: String,
+    val adminDelete: String,
+    val adminDeleteTitle: String,
+    val adminDeleteMessage: String,
+    val adminDeleted: String,
 )
 
 fun AppLanguage.uiStrings(): UiStrings = when (this) {
@@ -207,6 +211,10 @@ fun AppLanguage.uiStrings(): UiStrings = when (this) {
         adminCreateSampleData = "Создать тестовые данные",
         adminCreating         = "Создание данных…",
         adminNone             = "Пока нет",
+        adminDelete           = "Удалить",
+        adminDeleteTitle      = "Вы уверены?",
+        adminDeleteMessage    = "Это действие нельзя отменить.",
+        adminDeleted          = "Удалено!",
     )
     AppLanguage.KAZAKH -> UiStrings(
         myProgress        = "Менің прогресім",
@@ -303,6 +311,10 @@ fun AppLanguage.uiStrings(): UiStrings = when (this) {
         adminCreateSampleData = "Үлгі деректер жасау",
         adminCreating         = "Деректер жасалуда…",
         adminNone             = "Жоқ",
+        adminDelete           = "Жою",
+        adminDeleteTitle      = "Сенімдісіз бе?",
+        adminDeleteMessage    = "Бұл әрекетті болдырмауға болмайды.",
+        adminDeleted          = "Жойылды!",
     )
     else -> UiStrings(
         myProgress        = "My Progress",
@@ -399,5 +411,9 @@ fun AppLanguage.uiStrings(): UiStrings = when (this) {
         adminCreateSampleData = "Create Sample Data",
         adminCreating         = "Creating sample data…",
         adminNone             = "None yet",
+        adminDelete           = "Delete",
+        adminDeleteTitle      = "Are you sure?",
+        adminDeleteMessage    = "This action cannot be undone.",
+        adminDeleted          = "Deleted!",
     )
 }

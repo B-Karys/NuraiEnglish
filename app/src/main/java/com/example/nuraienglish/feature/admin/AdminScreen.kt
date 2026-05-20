@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -70,7 +71,8 @@ fun AdminScreen(
                     isSaving = state.isSaving,
                     onSave = { id, te, tr, tk, de, dr, dk, l, ty, lc, pt ->
                         viewModel.saveCourse(id, te, tr, tk, de, dr, dk, l, ty, lc, pt, strings.adminSaved)
-                    }
+                    },
+                    onDelete = { id -> viewModel.deleteCourse(id, strings.adminDeleted) }
                 )
                 1 -> LessonTab(
                     strings = strings,
@@ -80,7 +82,8 @@ fun AdminScreen(
                     isSaving = state.isSaving,
                     onSave = { cid, id, te, tr, tk, ord, tc, pts ->
                         viewModel.saveLesson(cid, id, te, tr, tk, ord, tc, pts, strings.adminSaved)
-                    }
+                    },
+                    onDelete = { cid, id -> viewModel.deleteLesson(cid, id, strings.adminDeleted) }
                 )
                 2 -> TaskTab(
                     strings = strings,
@@ -92,7 +95,8 @@ fun AdminScreen(
                     onLoadTasks = { cid, lid -> viewModel.loadTasks(cid, lid) },
                     onSave = { cid, lid, task ->
                         viewModel.saveTask(cid, lid, task, strings.adminSaved)
-                    }
+                    },
+                    onDelete = { cid, lid, tid -> viewModel.deleteTask(cid, lid, tid, strings.adminDeleted) }
                 )
                 3 -> SeedDataTab(strings = strings, isSaving = state.isSaving, onSeed = viewModel::seedSampleData)
             }
@@ -108,9 +112,11 @@ private fun CourseTab(
     language: AppLanguage,
     courses: List<Course>,
     isSaving: Boolean,
-    onSave: (id: String, te: String, tr: String, tk: String, de: String, dr: String, dk: String, level: String, type: CourseType, lessonCount: Int, pointsToUnlock: Int) -> Unit
+    onSave: (id: String, te: String, tr: String, tk: String, de: String, dr: String, dk: String, level: String, type: CourseType, lessonCount: Int, pointsToUnlock: Int) -> Unit,
+    onDelete: (id: String) -> Unit
 ) {
     var editing by remember { mutableStateOf<Course?>(null) }
+    var pendingDelete by remember { mutableStateOf<Course?>(null) }
     var titleEn by remember(editing) { mutableStateOf(editing?.titleEn ?: "") }
     var titleRu by remember(editing) { mutableStateOf(editing?.titleRu ?: "") }
     var titleKk by remember(editing) { mutableStateOf(editing?.titleKk ?: "") }
@@ -121,6 +127,15 @@ private fun CourseTab(
     var type by remember(editing) { mutableStateOf(editing?.type ?: CourseType.VOCABULARY) }
     var lessonCount by remember(editing) { mutableStateOf(editing?.lessonCount?.toString() ?: "0") }
     var points by remember(editing) { mutableStateOf(editing?.pointsToUnlock?.toString() ?: "0") }
+
+    pendingDelete?.let { course ->
+        DeleteConfirmDialog(
+            strings = strings,
+            itemName = course.title(language),
+            onConfirm = { onDelete(course.id); pendingDelete = null; if (editing?.id == course.id) editing = null },
+            onDismiss = { pendingDelete = null }
+        )
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -134,7 +149,9 @@ private fun CourseTab(
                     title = course.title(language),
                     subtitle = "${course.level} · ${courseTypeLabel(course.type, strings)}",
                     editLabel = strings.adminEdit,
-                    onEdit = { editing = course }
+                    deleteLabel = strings.adminDelete,
+                    onEdit = { editing = course },
+                    onDelete = { pendingDelete = course }
                 )
             }
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
@@ -191,11 +208,13 @@ private fun LessonTab(
     courses: List<Course>,
     lessonsByCourse: Map<String, List<Lesson>>,
     isSaving: Boolean,
-    onSave: (courseId: String, id: String, te: String, tr: String, tk: String, order: Int, taskCount: Int, points: Int) -> Unit
+    onSave: (courseId: String, id: String, te: String, tr: String, tk: String, order: Int, taskCount: Int, points: Int) -> Unit,
+    onDelete: (courseId: String, id: String) -> Unit
 ) {
     var selectedCourse by remember { mutableStateOf(courses.firstOrNull()?.id ?: "") }
     var courseExpanded by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Lesson?>(null) }
+    var pendingDelete by remember { mutableStateOf<Lesson?>(null) }
 
     var titleEn by remember(editing) { mutableStateOf(editing?.titleEn ?: "") }
     var titleRu by remember(editing) { mutableStateOf(editing?.titleRu ?: "") }
@@ -206,6 +225,15 @@ private fun LessonTab(
 
     val lessons = lessonsByCourse[selectedCourse] ?: emptyList()
     LaunchedEffect(lessons) { if (editing != null && lessons.none { it.id == editing!!.id }) editing = null }
+
+    pendingDelete?.let { lesson ->
+        DeleteConfirmDialog(
+            strings = strings,
+            itemName = lesson.title(language),
+            onConfirm = { onDelete(lesson.courseId, lesson.id); pendingDelete = null; if (editing?.id == lesson.id) editing = null },
+            onDismiss = { pendingDelete = null }
+        )
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -226,7 +254,9 @@ private fun LessonTab(
                     title = lesson.title(language),
                     subtitle = "${strings.taskWord} ${lesson.taskCount} · ${lesson.pointsReward} ${strings.pts}",
                     editLabel = strings.adminEdit,
-                    onEdit = { editing = lesson; selectedCourse = lesson.courseId }
+                    deleteLabel = strings.adminDelete,
+                    onEdit = { editing = lesson; selectedCourse = lesson.courseId },
+                    onDelete = { pendingDelete = lesson }
                 )
             }
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
@@ -273,13 +303,15 @@ private fun TaskTab(
     tasksByLesson: Map<String, List<Task>>,
     isSaving: Boolean,
     onLoadTasks: (courseId: String, lessonId: String) -> Unit,
-    onSave: (courseId: String, lessonId: String, task: Task) -> Unit
+    onSave: (courseId: String, lessonId: String, task: Task) -> Unit,
+    onDelete: (courseId: String, lessonId: String, taskId: String) -> Unit
 ) {
     var selectedCourse by remember { mutableStateOf(courses.firstOrNull()?.id ?: "") }
     var selectedLesson by remember { mutableStateOf("") }
     var courseExpanded by remember { mutableStateOf(false) }
     var lessonExpanded by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Task?>(null) }
+    var pendingDelete by remember { mutableStateOf<Task?>(null) }
 
     var taskType by remember(editing) { mutableStateOf(editing?.type ?: TaskType.WORD_TRANSLATION) }
     var questionEn by remember(editing) { mutableStateOf(editing?.questionEn ?: "") }
@@ -303,6 +335,15 @@ private fun TaskTab(
     // Load tasks whenever lesson selection changes
     LaunchedEffect(selectedLesson) {
         if (selectedLesson.isNotBlank()) onLoadTasks(selectedCourse, selectedLesson)
+    }
+
+    pendingDelete?.let { task ->
+        DeleteConfirmDialog(
+            strings = strings,
+            itemName = task.questionEn.take(40).let { if (task.questionEn.length > 40) "$it…" else it },
+            onConfirm = { onDelete(task.courseId, task.lessonId, task.id); pendingDelete = null; if (editing?.id == task.id) editing = null },
+            onDismiss = { pendingDelete = null }
+        )
     }
 
     Column(
@@ -344,7 +385,9 @@ private fun TaskTab(
                     title = task.questionEn.take(50).let { if (task.questionEn.length > 50) "$it…" else it },
                     subtitle = task.type.name.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() },
                     editLabel = strings.adminEdit,
-                    onEdit = { editing = task }
+                    deleteLabel = strings.adminDelete,
+                    onEdit = { editing = task },
+                    onDelete = { pendingDelete = task }
                 )
             }
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
@@ -461,7 +504,9 @@ private fun ExistingItemCard(
     title: String,
     subtitle: String,
     editLabel: String,
-    onEdit: () -> Unit
+    deleteLabel: String,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(Modifier.fillMaxWidth()) {
         Row(
@@ -474,8 +519,43 @@ private fun ExistingItemCard(
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             TextButton(onClick = onEdit) { Text(editLabel) }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = deleteLabel,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun DeleteConfirmDialog(
+    strings: UiStrings,
+    itemName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(strings.adminDeleteTitle, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("\"$itemName\"")
+                Text(strings.adminDeleteMessage, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) { Text(strings.adminDelete) }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) { Text(strings.adminCancel) }
+        }
+    )
 }
 
 @Composable

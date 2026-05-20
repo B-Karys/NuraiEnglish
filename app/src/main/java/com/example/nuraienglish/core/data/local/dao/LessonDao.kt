@@ -12,6 +12,9 @@ interface LessonDao {
     @Upsert
     suspend fun upsertAll(lessons: List<CachedLessonEntity>)
 
+    @Query("DELETE FROM lessons WHERE id = :id")
+    suspend fun deleteById(id: String)
+
     @Query("DELETE FROM lessons WHERE courseId = :courseId")
     suspend fun deleteByCourse(courseId: String)
 }

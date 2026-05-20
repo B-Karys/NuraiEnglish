@@ -96,6 +96,30 @@ class CourseRepository @Inject constructor(
         }
     }
 
+    suspend fun deleteCourse(courseId: String) {
+        courseDao.deleteById(courseId)
+        lessonDao.deleteByCourse(courseId)
+        runCatching {
+            firestore.collection("courses").document(courseId).delete().await()
+        }
+    }
+
+    suspend fun deleteLesson(courseId: String, lessonId: String) {
+        lessonDao.deleteById(lessonId)
+        runCatching {
+            firestore.collection("courses").document(courseId)
+                .collection("lessons").document(lessonId).delete().await()
+        }
+    }
+
+    suspend fun deleteTask(courseId: String, lessonId: String, taskId: String) {
+        runCatching {
+            firestore.collection("courses").document(courseId)
+                .collection("lessons").document(lessonId)
+                .collection("tasks").document(taskId).delete().await()
+        }
+    }
+
     private fun Course.toMap() = mapOf(
         "titleEn" to titleEn, "titleRu" to titleRu, "titleKk" to titleKk,
         "descriptionEn" to descriptionEn, "descriptionRu" to descriptionRu, "descriptionKk" to descriptionKk,
