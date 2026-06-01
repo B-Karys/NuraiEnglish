@@ -12,6 +12,7 @@ import com.example.nuraienglish.feature.admin.AdminScreen
 import com.example.nuraienglish.feature.auth.login.LoginScreen
 import com.example.nuraienglish.feature.auth.register.RegisterScreen
 import com.example.nuraienglish.feature.auth.verify.VerifyEmailScreen
+import com.example.nuraienglish.feature.cards.CardStudyScreen
 import com.example.nuraienglish.feature.courses.CourseListScreen
 import com.example.nuraienglish.feature.home.HomeScreen
 import com.example.nuraienglish.feature.lesson.LessonListScreen
@@ -109,8 +110,33 @@ fun AppNavGraph(
             LessonListScreen(
                 courseId = courseId,
                 language = language,
+                onStudyClick = { lessonId ->
+                    navController.navigate(Screen.CardStudy().createRoute(courseId, lessonId))
+                },
                 onLessonClick = { lessonId ->
                     navController.navigate(Screen.TaskSession().createRoute(courseId, lessonId))
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.CardStudy().route,
+            arguments = listOf(
+                navArgument("courseId") { type = NavType.StringType },
+                navArgument("lessonId") { type = NavType.StringType }
+            )
+        ) { backStack ->
+            val courseId = backStack.arguments?.getString("courseId") ?: return@composable
+            val lessonId = backStack.arguments?.getString("lessonId") ?: return@composable
+            CardStudyScreen(
+                courseId = courseId,
+                lessonId = lessonId,
+                language = language,
+                onStartPractice = {
+                    navController.navigate(Screen.TaskSession().createRoute(courseId, lessonId)) {
+                        popUpTo(Screen.CardStudy().createRoute(courseId, lessonId)) { inclusive = true }
+                    }
                 },
                 onBack = { navController.popBackStack() }
             )

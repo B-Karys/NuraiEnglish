@@ -6,6 +6,7 @@ import com.example.nuraienglish.core.data.local.entity.toDomain
 import com.example.nuraienglish.core.data.local.entity.toEntity
 import com.example.nuraienglish.core.data.model.Course
 import com.example.nuraienglish.core.data.model.CourseType
+import com.example.nuraienglish.core.data.model.LearningCard
 import com.example.nuraienglish.core.data.model.Lesson
 import com.example.nuraienglish.core.data.model.Task
 import com.example.nuraienglish.core.data.model.TaskType
@@ -61,6 +62,23 @@ class CourseRepository @Inject constructor(
         }
     }
 
+    suspend fun getLearningCards(courseId: String, lessonId: String): List<LearningCard> {
+        val snap = firestore.collection("courses").document(courseId)
+            .collection("lessons").document(lessonId)
+            .collection("cards")
+            .orderBy("order")
+            .get().await()
+        return snap.documents.mapNotNull { doc ->
+            runCatching {
+                doc.toObject(LearningCard::class.java)?.copy(
+                    id = doc.id,
+                    lessonId = lessonId,
+                    courseId = courseId,
+                )
+            }.getOrNull()
+        }.filter { it.isPublished }
+    }
+
     suspend fun saveTask(courseId: String, lessonId: String, task: Task) {
         val ref = if (task.id.isBlank())
             firestore.collection("courses").document(courseId)
@@ -71,6 +89,18 @@ class CourseRepository @Inject constructor(
                 .collection("lessons").document(lessonId)
                 .collection("tasks").document(task.id)
         ref.set(task.toMap()).await()
+    }
+
+    suspend fun saveLearningCard(courseId: String, lessonId: String, card: LearningCard) {
+        val ref = if (card.id.isBlank())
+            firestore.collection("courses").document(courseId)
+                .collection("lessons").document(lessonId)
+                .collection("cards").document()
+        else
+            firestore.collection("courses").document(courseId)
+                .collection("lessons").document(lessonId)
+                .collection("cards").document(card.id)
+        ref.set(card.toMap()).await()
     }
 
     suspend fun saveCourse(course: Course) {
@@ -120,6 +150,14 @@ class CourseRepository @Inject constructor(
         }
     }
 
+    suspend fun deleteLearningCard(courseId: String, lessonId: String, cardId: String) {
+        runCatching {
+            firestore.collection("courses").document(courseId)
+                .collection("lessons").document(lessonId)
+                .collection("cards").document(cardId).delete().await()
+        }
+    }
+
     private fun Course.toMap() = mapOf(
         "titleEn" to titleEn, "titleRu" to titleRu, "titleKk" to titleKk,
         "descriptionEn" to descriptionEn, "descriptionRu" to descriptionRu, "descriptionKk" to descriptionKk,
@@ -138,5 +176,23 @@ class CourseRepository @Inject constructor(
         "answerEn" to answerEn, "answerRu" to answerRu, "answerKk" to answerKk,
         "options" to options, "optionsRu" to optionsRu, "optionsKk" to optionsKk,
         "words" to words, "correctSentence" to correctSentence
+    )
+
+    private fun LearningCard.toMap() = mapOf(
+        "lessonId" to lessonId,
+        "courseId" to courseId,
+        "order" to order,
+        "type" to type.name,
+        "frontEn" to frontEn,
+        "frontRu" to frontRu,
+        "frontKk" to frontKk,
+        "backEn" to backEn,
+        "backRu" to backRu,
+        "backKk" to backKk,
+        "noteEn" to noteEn,
+        "noteRu" to noteRu,
+        "noteKk" to noteKk,
+        "speakText" to speakText,
+        "isPublished" to isPublished,
     )
 }

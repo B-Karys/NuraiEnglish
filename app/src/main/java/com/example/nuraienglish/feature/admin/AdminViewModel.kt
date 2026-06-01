@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nuraienglish.core.data.model.Course
 import com.example.nuraienglish.core.data.model.CourseType
+import com.example.nuraienglish.core.data.model.LearningCard
 import com.example.nuraienglish.core.data.model.Lesson
 import com.example.nuraienglish.core.data.model.Task
 import com.example.nuraienglish.core.data.model.TaskType
@@ -18,6 +19,7 @@ import javax.inject.Inject
 data class AdminUiState(
     val courses: List<Course> = emptyList(),
     val lessonsByCourse: Map<String, List<Lesson>> = emptyMap(),
+    val cardsByLesson: Map<String, List<LearningCard>> = emptyMap(),
     val tasksByLesson: Map<String, List<Task>> = emptyMap(),
     val isSaving: Boolean = false,
     val successMessage: String? = null,
@@ -109,12 +111,41 @@ class AdminViewModel @Inject constructor(
         }
     }
 
+    fun saveLearningCard(
+        courseId: String,
+        lessonId: String,
+        card: LearningCard,
+        successMsg: String = "Saved!"
+    ) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isSaving = true, error = null)
+            runCatching { courseRepository.saveLearningCard(courseId, lessonId, card) }
+                .onSuccess {
+                    _state.value = _state.value.copy(isSaving = false, successMessage = successMsg)
+                    loadLearningCards(courseId, lessonId)
+                }
+                .onFailure { _state.value = _state.value.copy(isSaving = false, error = it.message) }
+        }
+    }
+
     fun loadTasks(courseId: String, lessonId: String) {
         if (lessonId.isBlank() || courseId.isBlank()) return
         viewModelScope.launch {
             val tasks = runCatching { courseRepository.getTasks(courseId, lessonId) }.getOrDefault(emptyList())
             _state.value = _state.value.copy(
                 tasksByLesson = _state.value.tasksByLesson + (lessonId to tasks)
+            )
+        }
+    }
+
+    fun loadLearningCards(courseId: String, lessonId: String) {
+        if (lessonId.isBlank() || courseId.isBlank()) return
+        viewModelScope.launch {
+            val cards = runCatching {
+                courseRepository.getLearningCards(courseId, lessonId)
+            }.getOrDefault(emptyList())
+            _state.value = _state.value.copy(
+                cardsByLesson = _state.value.cardsByLesson + (lessonId to cards)
             )
         }
     }
@@ -148,6 +179,18 @@ class AdminViewModel @Inject constructor(
                 .onSuccess {
                     _state.value = _state.value.copy(isSaving = false, successMessage = successMsg)
                     loadTasks(courseId, lessonId)
+                }
+                .onFailure { _state.value = _state.value.copy(isSaving = false, error = it.message) }
+        }
+    }
+
+    fun deleteLearningCard(courseId: String, lessonId: String, cardId: String, successMsg: String = "Deleted!") {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isSaving = true, error = null)
+            runCatching { courseRepository.deleteLearningCard(courseId, lessonId, cardId) }
+                .onSuccess {
+                    _state.value = _state.value.copy(isSaving = false, successMessage = successMsg)
+                    loadLearningCards(courseId, lessonId)
                 }
                 .onFailure { _state.value = _state.value.copy(isSaving = false, error = it.message) }
         }

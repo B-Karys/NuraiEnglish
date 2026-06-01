@@ -17,11 +17,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.nuraienglish.core.data.model.AppLanguage
 import com.example.nuraienglish.core.data.model.Course
 import com.example.nuraienglish.core.data.model.CourseType
+import com.example.nuraienglish.core.data.model.LearningCard
+import com.example.nuraienglish.core.data.model.LearningCardType
 import com.example.nuraienglish.core.data.model.Lesson
 import com.example.nuraienglish.core.data.model.Task
 import com.example.nuraienglish.core.data.model.TaskType
 import com.example.nuraienglish.core.ui.UiStrings
 import com.example.nuraienglish.core.ui.uiStrings
+import com.example.nuraienglish.feature.cards.CardStudyStrings
+import com.example.nuraienglish.feature.cards.cardStudyStrings
 
 @Composable
 fun AdminScreen(
@@ -32,7 +36,14 @@ fun AdminScreen(
     val state by viewModel.state.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     val strings = language.uiStrings()
-    val tabs = listOf(strings.adminAddCourse, strings.adminAddLesson, strings.adminAddTask, strings.adminSeedData)
+    val cardStrings = language.cardStudyStrings()
+    val tabs = listOf(
+        strings.adminAddCourse,
+        strings.adminAddLesson,
+        cardStrings.addCard,
+        strings.adminAddTask,
+        strings.adminSeedData,
+    )
 
     LaunchedEffect(state.successMessage, state.error) {
         if (state.successMessage != null || state.error != null) {
@@ -85,7 +96,23 @@ fun AdminScreen(
                     },
                     onDelete = { cid, id -> viewModel.deleteLesson(cid, id, strings.adminDeleted) }
                 )
-                2 -> TaskTab(
+                2 -> CardTab(
+                    strings = strings,
+                    cardStrings = cardStrings,
+                    language = language,
+                    courses = state.courses,
+                    lessonsByCourse = state.lessonsByCourse,
+                    cardsByLesson = state.cardsByLesson,
+                    isSaving = state.isSaving,
+                    onLoadCards = { cid, lid -> viewModel.loadLearningCards(cid, lid) },
+                    onSave = { cid, lid, card ->
+                        viewModel.saveLearningCard(cid, lid, card, strings.adminSaved)
+                    },
+                    onDelete = { cid, lid, cardId ->
+                        viewModel.deleteLearningCard(cid, lid, cardId, strings.adminDeleted)
+                    }
+                )
+                3 -> TaskTab(
                     strings = strings,
                     language = language,
                     courses = state.courses,
@@ -98,7 +125,7 @@ fun AdminScreen(
                     },
                     onDelete = { cid, lid, tid -> viewModel.deleteTask(cid, lid, tid, strings.adminDeleted) }
                 )
-                3 -> SeedDataTab(strings = strings, isSaving = state.isSaving, onSeed = viewModel::seedSampleData)
+                4 -> SeedDataTab(strings = strings, isSaving = state.isSaving, onSeed = viewModel::seedSampleData)
             }
         }
     }
@@ -286,6 +313,197 @@ private fun LessonTab(
             onSave = {
                 onSave(selectedCourse, editing?.id ?: "", titleEn, titleRu, titleKk,
                     order.toIntOrNull() ?: 1, taskCount.toIntOrNull() ?: 5, points.toIntOrNull() ?: 10)
+                editing = null
+            }
+        )
+    }
+}
+
+// ─── Card Tab ─────────────────────────────────────────────────────────────────
+
+@Composable
+private fun CardTab(
+    strings: UiStrings,
+    cardStrings: CardStudyStrings,
+    language: AppLanguage,
+    courses: List<Course>,
+    lessonsByCourse: Map<String, List<Lesson>>,
+    cardsByLesson: Map<String, List<LearningCard>>,
+    isSaving: Boolean,
+    onLoadCards: (courseId: String, lessonId: String) -> Unit,
+    onSave: (courseId: String, lessonId: String, card: LearningCard) -> Unit,
+    onDelete: (courseId: String, lessonId: String, cardId: String) -> Unit
+) {
+    var selectedCourse by remember { mutableStateOf(courses.firstOrNull()?.id ?: "") }
+    var selectedLesson by remember { mutableStateOf("") }
+    var courseExpanded by remember { mutableStateOf(false) }
+    var lessonExpanded by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<LearningCard?>(null) }
+    var pendingDelete by remember { mutableStateOf<LearningCard?>(null) }
+
+    var cardType by remember(editing) { mutableStateOf(editing?.type ?: LearningCardType.VOCABULARY) }
+    var order by remember(editing) { mutableStateOf(editing?.order?.toString() ?: "") }
+    var frontEn by remember(editing) { mutableStateOf(editing?.frontEn ?: "") }
+    var frontRu by remember(editing) { mutableStateOf(editing?.frontRu ?: "") }
+    var frontKk by remember(editing) { mutableStateOf(editing?.frontKk ?: "") }
+    var backEn by remember(editing) { mutableStateOf(editing?.backEn ?: "") }
+    var backRu by remember(editing) { mutableStateOf(editing?.backRu ?: "") }
+    var backKk by remember(editing) { mutableStateOf(editing?.backKk ?: "") }
+    var noteEn by remember(editing) { mutableStateOf(editing?.noteEn ?: "") }
+    var noteRu by remember(editing) { mutableStateOf(editing?.noteRu ?: "") }
+    var noteKk by remember(editing) { mutableStateOf(editing?.noteKk ?: "") }
+    var speakText by remember(editing) { mutableStateOf(editing?.speakText ?: "") }
+
+    LaunchedEffect(courses) {
+        if (selectedCourse.isBlank()) selectedCourse = courses.firstOrNull()?.id ?: ""
+    }
+
+    val lessons = lessonsByCourse[selectedCourse] ?: emptyList()
+    val existingCards = cardsByLesson[selectedLesson] ?: emptyList()
+
+    LaunchedEffect(selectedCourse) { selectedLesson = ""; editing = null }
+    LaunchedEffect(lessons) {
+        if (selectedLesson.isBlank()) selectedLesson = lessons.firstOrNull()?.id ?: ""
+    }
+    LaunchedEffect(selectedLesson) {
+        if (selectedLesson.isNotBlank()) onLoadCards(selectedCourse, selectedLesson)
+    }
+
+    pendingDelete?.let { card ->
+        DeleteConfirmDialog(
+            strings = strings,
+            itemName = card.front(language).ifBlank { card.frontEn }.take(40),
+            onConfirm = {
+                onDelete(card.courseId, card.lessonId, card.id)
+                pendingDelete = null
+                if (editing?.id == card.id) editing = null
+            },
+            onDismiss = { pendingDelete = null }
+        )
+    }
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        CourseDropdown(
+            courses = courses,
+            selectedId = selectedCourse,
+            language = language,
+            expanded = courseExpanded,
+            onExpandedChange = { courseExpanded = it },
+            onSelect = { selectedCourse = it; courseExpanded = false }
+        )
+
+        ExposedDropdownMenuBox(expanded = lessonExpanded, onExpandedChange = { lessonExpanded = it }) {
+            OutlinedTextField(
+                value = lessons.firstOrNull { it.id == selectedLesson }?.title(language)
+                    ?: if (lessons.isEmpty()) strings.adminNone else "Select lesson",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Lesson") },
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(lessonExpanded) },
+                enabled = lessons.isNotEmpty()
+            )
+            ExposedDropdownMenu(expanded = lessonExpanded, onDismissRequest = { lessonExpanded = false }) {
+                lessons.forEach { lesson ->
+                    DropdownMenuItem(
+                        text = { Text(lesson.title(language)) },
+                        onClick = { selectedLesson = lesson.id; lessonExpanded = false; editing = null }
+                    )
+                }
+            }
+        }
+
+        if (existingCards.isNotEmpty()) {
+            SectionLabel(cardStrings.studyCards)
+            existingCards.forEach { card ->
+                ExistingItemCard(
+                    title = card.front(language).ifBlank { card.frontEn },
+                    subtitle = cardTypeLabel(card.type, cardStrings),
+                    editLabel = strings.adminEdit,
+                    deleteLabel = strings.adminDelete,
+                    onEdit = { editing = card },
+                    onDelete = { pendingDelete = card }
+                )
+            }
+            HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        }
+
+        Text(
+            if (editing != null) cardStrings.editCard else cardStrings.newCard,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(
+                order,
+                { order = it },
+                label = { Text("Order") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+            OutlinedTextField(
+                speakText,
+                { speakText = it },
+                label = { Text(cardStrings.speakText) },
+                modifier = Modifier.weight(2f),
+                singleLine = true
+            )
+        }
+
+        Text(cardStrings.cardType, style = MaterialTheme.typography.labelLarge)
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            LearningCardType.entries.forEach { type ->
+                FilterChip(
+                    selected = cardType == type,
+                    onClick = { cardType = type },
+                    label = { Text(cardTypeLabel(type, cardStrings)) }
+                )
+            }
+        }
+
+        OutlinedTextField(frontEn, { frontEn = it }, label = { Text("${cardStrings.front} (English)") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(frontRu, { frontRu = it }, label = { Text("${cardStrings.front} (Russian)") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(frontKk, { frontKk = it }, label = { Text("${cardStrings.front} (Kazakh)") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(backEn, { backEn = it }, label = { Text("${cardStrings.back} (English)") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(backRu, { backRu = it }, label = { Text("${cardStrings.back} (Russian)") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(backKk, { backKk = it }, label = { Text("${cardStrings.back} (Kazakh)") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(noteEn, { noteEn = it }, label = { Text("${cardStrings.note} (English)") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(noteRu, { noteRu = it }, label = { Text("${cardStrings.note} (Russian)") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(noteKk, { noteKk = it }, label = { Text("${cardStrings.note} (Kazakh)") }, modifier = Modifier.fillMaxWidth())
+
+        SaveRow(
+            strings = strings,
+            isSaving = isSaving,
+            isEditing = editing != null,
+            saveLabel = cardStrings.saveCard,
+            enabled = selectedLesson.isNotBlank() && frontEn.isNotBlank() && backEn.isNotBlank(),
+            onCancel = { editing = null },
+            onSave = {
+                onSave(
+                    selectedCourse,
+                    selectedLesson,
+                    LearningCard(
+                        id = editing?.id ?: "",
+                        courseId = selectedCourse,
+                        lessonId = selectedLesson,
+                        order = order.toIntOrNull() ?: editing?.order ?: (existingCards.size + 1),
+                        type = cardType,
+                        frontEn = frontEn,
+                        frontRu = frontRu,
+                        frontKk = frontKk,
+                        backEn = backEn,
+                        backRu = backRu,
+                        backKk = backKk,
+                        noteEn = noteEn,
+                        noteRu = noteRu,
+                        noteKk = noteKk,
+                        speakText = speakText,
+                    )
+                )
                 editing = null
             }
         )
@@ -622,6 +840,14 @@ private fun taskTypeLabel(type: TaskType, strings: UiStrings) = when (type) {
     TaskType.SENTENCE_BUILDING    -> "Build"
     TaskType.LISTEN_AND_TRANSLATE -> strings.listenAndTranslate
     TaskType.LISTEN_AND_WRITE     -> strings.listenAndWrite
+}
+
+private fun cardTypeLabel(type: LearningCardType, strings: CardStudyStrings) = when (type) {
+    LearningCardType.VOCABULARY -> strings.wordCard
+    LearningCardType.GRAMMAR -> strings.grammarCard
+    LearningCardType.PHRASE -> strings.phraseCard
+    LearningCardType.LISTENING -> strings.listeningCard
+    LearningCardType.CUSTOM -> strings.studyCards
 }
 
 @Composable

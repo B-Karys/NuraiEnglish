@@ -19,4 +19,9 @@ sealed class Screen(val route: String) {
         Screen("tasks/{courseId}/{lessonId}") {
         fun createRoute(courseId: String, lessonId: String) = "tasks/$courseId/$lessonId"
     }
+
+    data class CardStudy(val courseId: String = "{courseId}", val lessonId: String = "{lessonId}") :
+        Screen("cards/{courseId}/{lessonId}") {
+        fun createRoute(courseId: String, lessonId: String) = "cards/$courseId/$lessonId"
+    }
 }
