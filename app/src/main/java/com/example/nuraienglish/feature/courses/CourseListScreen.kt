@@ -20,6 +20,8 @@ import com.example.nuraienglish.core.data.model.AppLanguage
 import com.example.nuraienglish.core.data.model.Course
 import com.example.nuraienglish.core.data.model.CourseType
 import com.example.nuraienglish.core.data.model.Progress
+import com.example.nuraienglish.core.data.model.canBeOpenedBy
+import com.example.nuraienglish.core.data.model.pointsNeeded
 import com.example.nuraienglish.core.ui.uiStrings
 
 @Composable
@@ -31,6 +33,7 @@ fun CourseListScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val strings = language.uiStrings()
+    var lockedCourseTitle by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -61,12 +64,31 @@ fun CourseListScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            lockedCourseTitle?.let { title ->
+                item {
+                    LockedCourseNotice(
+                        title = title,
+                        points = state.totalPoints,
+                        strings = strings
+                    )
+                }
+            }
             items(state.courses, key = { it.id }) { course ->
+                val isUnlocked = course.canBeOpenedBy(state.totalPoints, state.isAdmin)
                 CourseCard(
                     course = course,
                     progress = state.progressMap[course.id],
                     language = language,
-                    onClick = { onCourseClick(course.id) }
+                    totalPoints = state.totalPoints,
+                    isAdmin = state.isAdmin,
+                    onClick = {
+                        if (isUnlocked) {
+                            lockedCourseTitle = null
+                            onCourseClick(course.id)
+                        } else {
+                            lockedCourseTitle = course.title(language)
+                        }
+                    }
                 )
             }
         }
@@ -74,13 +96,42 @@ fun CourseListScreen(
 }
 
 @Composable
-fun CourseCard(course: Course, progress: Progress?, language: AppLanguage, onClick: () -> Unit) {
+private fun LockedCourseNotice(
+    title: String,
+    points: Int,
+    strings: com.example.nuraienglish.core.ui.UiStrings
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+    ) {
+        Text(
+            "$title is locked. You have $points ${strings.pts}.",
+            modifier = Modifier.padding(14.dp),
+            color = MaterialTheme.colorScheme.onErrorContainer,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+fun CourseCard(
+    course: Course,
+    progress: Progress?,
+    language: AppLanguage,
+    totalPoints: Int,
+    isAdmin: Boolean,
+    onClick: () -> Unit
+) {
     val strings = language.uiStrings()
+    val isUnlocked = course.canBeOpenedBy(totalPoints, isAdmin)
     val typeColor = when (course.type) {
         CourseType.VOCABULARY -> MaterialTheme.colorScheme.primary
         CourseType.GRAMMAR    -> MaterialTheme.colorScheme.secondary
         CourseType.LISTENING  -> MaterialTheme.colorScheme.tertiary
     }
+    val accentColor = if (isUnlocked) typeColor else MaterialTheme.colorScheme.onSurfaceVariant
     val typeLabel = when (course.type) {
         CourseType.VOCABULARY -> strings.typeVocabulary
         CourseType.GRAMMAR    -> strings.typeGrammar
@@ -89,7 +140,13 @@ fun CourseCard(course: Course, progress: Progress?, language: AppLanguage, onCli
 
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+        colors = CardDefaults.cardColors(
+            containerColor = if (isUnlocked) {
+                MaterialTheme.colorScheme.surfaceContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHighest
+            }
+        )
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
@@ -97,17 +154,17 @@ fun CourseCard(course: Course, progress: Progress?, language: AppLanguage, onCli
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(color = typeColor.copy(alpha = 0.15f), shape = MaterialTheme.shapes.small) {
+                Surface(color = accentColor.copy(alpha = 0.15f), shape = MaterialTheme.shapes.small) {
                     Text(
                         text = typeLabel,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        color = typeColor,
+                        color = accentColor,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
                     )
                 }
                 Text(
-                    course.level,
+                    if (isUnlocked) course.level else "Locked",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -131,20 +188,38 @@ fun CourseCard(course: Course, progress: Progress?, language: AppLanguage, onCli
                 LinearProgressIndicator(
                     progress = { progress.completionFraction },
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                    color = typeColor
+                    color = accentColor
                 )
                 Text(
-                    "${progress.completedLessons.size} ${strings.lessonsOf} ${progress.totalLessons} ${strings.lessonsDone}",
+                    if (isUnlocked) {
+                        "${progress.completedLessons.size} ${strings.lessonsOf} ${progress.totalLessons} ${strings.lessonsDone}"
+                    } else {
+                        courseAccessLabel(course, totalPoints, isAdmin, strings)
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
                 Text(
-                    "${course.lessonCount} ${strings.lessons}",
+                    courseAccessLabel(course, totalPoints, isAdmin, strings),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
+    }
+}
+
+private fun courseAccessLabel(
+    course: Course,
+    totalPoints: Int,
+    isAdmin: Boolean,
+    strings: com.example.nuraienglish.core.ui.UiStrings
+): String {
+    return when {
+        isAdmin && course.pointsToUnlock > 0 -> "${course.lessonCount} ${strings.lessons} - admin access"
+        course.pointsToUnlock == 0 -> "${course.lessonCount} ${strings.lessons}"
+        course.canBeOpenedBy(totalPoints, isAdmin) -> "${course.lessonCount} ${strings.lessons} - ${course.pointsToUnlock} ${strings.pts}"
+        else -> "${course.lessonCount} ${strings.lessons} - needs ${course.pointsNeeded(totalPoints)} ${strings.pts}"
     }
 }
