@@ -21,7 +21,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.nuraienglish.core.data.model.AppLanguage
 import com.example.nuraienglish.core.data.model.Course
 import com.example.nuraienglish.core.data.model.CourseType
+import com.example.nuraienglish.core.data.model.LearningLevel
 import com.example.nuraienglish.core.data.model.Progress
+import com.example.nuraienglish.core.data.model.learningLevelForPoints
+import com.example.nuraienglish.core.data.model.learningLevels
+import com.example.nuraienglish.core.data.model.levelProgressFraction
 import com.example.nuraienglish.core.ui.uiStrings
 
 @Composable
@@ -36,7 +40,9 @@ fun HomeScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val strings = language.uiStrings()
+    val currentLevel = learningLevelForPoints(state.totalPoints)
     var showLanguageDialog by remember { mutableStateOf(false) }
+    var showLevelDialog by remember { mutableStateOf(false) }
 
     if (showLanguageDialog) {
         LanguagePickerDialog(
@@ -44,6 +50,13 @@ fun HomeScreen(
             strings = strings,
             onSelect = { viewModel.setLanguage(it.code) },
             onDismiss = { showLanguageDialog = false }
+        )
+    }
+    if (showLevelDialog) {
+        LevelProgressDialog(
+            points = state.totalPoints,
+            strings = strings,
+            onDismiss = { showLevelDialog = false }
         )
     }
 
@@ -79,8 +92,9 @@ fun HomeScreen(
                 PointsBanner(
                     name = state.user?.displayName ?: "",
                     points = state.totalPoints,
-                    level = state.user?.currentLevel ?: "A1",
+                    level = currentLevel.label,
                     strings = strings,
+                    onClick = { showLevelDialog = true },
                 )
             }
 
@@ -173,9 +187,10 @@ private fun PointsBanner(
     points: Int,
     level: String,
     strings: com.example.nuraienglish.core.ui.UiStrings,
+    onClick: () -> Unit,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
         Row(
@@ -211,6 +226,115 @@ private fun PointsBanner(
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun LevelProgressDialog(
+    points: Int,
+    strings: com.example.nuraienglish.core.ui.UiStrings,
+    onDismiss: () -> Unit,
+) {
+    val currentLevel = learningLevelForPoints(points)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Level progress", fontWeight = FontWeight.Bold) },
+        text = {
+            LevelProgressContent(
+                points = points,
+                currentLevel = currentLevel,
+                strings = strings,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(strings.close) }
+        },
+    )
+}
+
+@Composable
+private fun LevelProgressContent(
+    points: Int,
+    currentLevel: LearningLevel,
+    strings: com.example.nuraienglish.core.ui.UiStrings,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text(
+            "$points ${strings.pts} - ${currentLevel.label}",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(10.dp)
+                    .height(220.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .fillMaxHeight(levelProgressFraction(points))
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
+            Column(
+                modifier = Modifier.height(220.dp).weight(1f),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                learningLevels.forEach { level ->
+                    LevelProgressRow(
+                        level = level,
+                        isCurrent = level.label == currentLevel.label,
+                        strings = strings,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LevelProgressRow(
+    level: LearningLevel,
+    isCurrent: Boolean,
+    strings: com.example.nuraienglish.core.ui.UiStrings,
+) {
+    Surface(
+        color = if (isCurrent) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        },
+        shape = MaterialTheme.shapes.small,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                level.label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = if (isCurrent) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+            Text(
+                "${level.minPoints}-${level.maxPoints} ${strings.pts}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

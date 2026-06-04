@@ -22,6 +22,7 @@ import com.example.nuraienglish.core.data.model.CourseType
 import com.example.nuraienglish.core.data.model.Progress
 import com.example.nuraienglish.core.data.model.canBeOpenedBy
 import com.example.nuraienglish.core.data.model.pointsNeeded
+import com.example.nuraienglish.core.data.model.requiredPointsToOpen
 import com.example.nuraienglish.core.ui.uiStrings
 
 @Composable
@@ -216,10 +217,11 @@ private fun courseAccessLabel(
     isAdmin: Boolean,
     strings: com.example.nuraienglish.core.ui.UiStrings
 ): String {
+    val requiredPoints = course.requiredPointsToOpen()
     return when {
-        isAdmin && course.pointsToUnlock > 0 -> "${course.lessonCount} ${strings.lessons} - admin access"
-        course.pointsToUnlock == 0 -> "${course.lessonCount} ${strings.lessons}"
-        course.canBeOpenedBy(totalPoints, isAdmin) -> "${course.lessonCount} ${strings.lessons} - ${course.pointsToUnlock} ${strings.pts}"
+        isAdmin && requiredPoints > 0 -> "${course.lessonCount} ${strings.lessons} - admin access"
+        requiredPoints == 0 -> "${course.lessonCount} ${strings.lessons}"
+        course.canBeOpenedBy(totalPoints, isAdmin) -> "${course.lessonCount} ${strings.lessons} - $requiredPoints ${strings.pts}"
         else -> "${course.lessonCount} ${strings.lessons} - needs ${course.pointsNeeded(totalPoints)} ${strings.pts}"
     }
 }
