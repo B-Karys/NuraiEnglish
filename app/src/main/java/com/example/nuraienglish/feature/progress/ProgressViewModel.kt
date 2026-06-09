@@ -34,7 +34,9 @@ class ProgressViewModel @Inject constructor(
             ) { courses, progressList ->
                 val map = progressList.associateBy { it.courseId }
                 _state.value = ProgressUiState(
-                    items = courses.map { it to map[it.id] },
+                    items = courses.mapNotNull { course ->
+                        map[course.id]?.let { progress -> course to progress }
+                    },
                     totalPoints = progressList.sumOf { it.points },
                     isLoading = false
                 )

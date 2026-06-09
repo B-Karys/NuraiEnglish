@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nuraienglish.core.data.model.AppLanguage
 import com.example.nuraienglish.core.data.model.nativeLanguage
-import com.example.nuraienglish.core.data.model.Lesson
 import com.example.nuraienglish.core.data.model.Task
 import com.example.nuraienglish.core.data.repository.CourseRepository
 import com.example.nuraienglish.core.data.repository.ProgressRepository
@@ -77,7 +76,8 @@ class TaskViewModel @Inject constructor(
             val passed = s.tasks.isNotEmpty() && correct.toFloat() / s.tasks.size >= 0.8f
             val reward = if (passed) s.lessonPointsReward else 0
             viewModelScope.launch {
-                runCatching { progressRepository.completeLesson(courseId, lessonId, reward) }
+                val totalLessons = courseRepository.getCourse(courseId)?.lessonCount ?: 0
+                runCatching { progressRepository.completeLesson(courseId, lessonId, reward, totalLessons) }
             }
             _state.value = s.copy(
                 isFinished = true,

@@ -78,6 +78,15 @@ private fun TotalPointsCard(points: Int) {
 
 @Composable
 private fun CourseProgressCard(course: Course, progress: Progress?, language: AppLanguage) {
+    val totalLessons = progress?.effectiveTotalLessons(course) ?: course.lessonCount
+    val completedLessons = progress?.completedLessons?.size ?: 0
+    val completionFraction = if (totalLessons == 0) {
+        0f
+    } else {
+        (completedLessons.toFloat() / totalLessons).coerceIn(0f, 1f)
+    }
+    val isCompleted = progress != null && totalLessons > 0 && completedLessons >= totalLessons
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
@@ -87,13 +96,17 @@ private fun CourseProgressCard(course: Course, progress: Progress?, language: Ap
                 Text(course.title(language), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 Text(course.level, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
-            if (progress != null && progress.totalLessons > 0) {
+            if (progress != null && totalLessons > 0) {
                 LinearProgressIndicator(
-                    progress = { progress.completionFraction },
+                    progress = { completionFraction },
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape)
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("${progress.completedLessons.size}/${progress.totalLessons} lessons", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        if (isCompleted) "Completed" else "$completedLessons/$totalLessons lessons",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Text("+${progress.points} pts", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                 }
             } else {
@@ -102,3 +115,6 @@ private fun CourseProgressCard(course: Course, progress: Progress?, language: Ap
         }
     }
 }
+
+private fun Progress.effectiveTotalLessons(course: Course): Int =
+    totalLessons.takeIf { it > 0 } ?: course.lessonCount

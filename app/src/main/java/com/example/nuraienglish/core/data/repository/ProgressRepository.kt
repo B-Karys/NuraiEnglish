@@ -23,7 +23,22 @@ class ProgressRepository @Inject constructor(
     fun observeAllProgress(): Flow<List<Progress>> =
         progressDao.observeAll().map { it.map { e -> e.toDomain() } }
 
-    suspend fun completeLesson(courseId: String, lessonId: String, points: Int) {
+    suspend fun startCourse(courseId: String, totalLessons: Int) {
+        val existing = progressDao.getByCourse(courseId)?.toDomain()
+        val updated = (existing ?: Progress(courseId = courseId)).copy(
+            totalLessons = totalLessons,
+            lastUpdated = existing?.lastUpdated ?: System.currentTimeMillis()
+        )
+        progressDao.upsert(updated.toEntity())
+
+        if (uid.isNotBlank()) {
+            firestore.collection("users").document(uid)
+                .collection("progress").document(courseId)
+                .set(updated.toFirestoreMap()).await()
+        }
+    }
+
+    suspend fun completeLesson(courseId: String, lessonId: String, points: Int, totalLessons: Int) {
         val existing = progressDao.getByCourse(courseId)?.toDomain()
             ?: Progress(courseId = courseId)
 
@@ -31,6 +46,7 @@ class ProgressRepository @Inject constructor(
 
         val updated = existing.copy(
             completedLessons = existing.completedLessons + lessonId,
+            totalLessons = totalLessons,
             points = existing.points + points,
             lastUpdated = System.currentTimeMillis()
         )

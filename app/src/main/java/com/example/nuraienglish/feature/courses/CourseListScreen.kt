@@ -138,6 +138,13 @@ fun CourseCard(
         CourseType.GRAMMAR    -> strings.typeGrammar
         CourseType.LISTENING  -> strings.typeListening
     }
+    val totalLessons = progress?.effectiveTotalLessons(course) ?: course.lessonCount
+    val completedLessons = progress?.completedLessons?.size ?: 0
+    val completionFraction = if (totalLessons == 0) {
+        0f
+    } else {
+        (completedLessons.toFloat() / totalLessons).coerceIn(0f, 1f)
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -185,15 +192,19 @@ fun CourseCard(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            if (progress != null && progress.totalLessons > 0) {
+            if (progress != null && totalLessons > 0) {
                 LinearProgressIndicator(
-                    progress = { progress.completionFraction },
+                    progress = { completionFraction },
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
                     color = accentColor
                 )
                 Text(
                     if (isUnlocked) {
-                        "${progress.completedLessons.size} ${strings.lessonsOf} ${progress.totalLessons} ${strings.lessonsDone}"
+                        if (completedLessons >= totalLessons) {
+                            "Completed"
+                        } else {
+                            "$completedLessons ${strings.lessonsOf} $totalLessons ${strings.lessonsDone}"
+                        }
                     } else {
                         courseAccessLabel(course, totalPoints, isAdmin, strings)
                     },
@@ -210,6 +221,9 @@ fun CourseCard(
         }
     }
 }
+
+private fun Progress.effectiveTotalLessons(course: Course): Int =
+    totalLessons.takeIf { it > 0 } ?: course.lessonCount
 
 private fun courseAccessLabel(
     course: Course,

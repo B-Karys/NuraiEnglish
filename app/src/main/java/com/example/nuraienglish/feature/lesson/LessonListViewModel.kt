@@ -33,11 +33,16 @@ class LessonListViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            val course = courseRepository.getCourse(courseId)
+            course?.let {
+                runCatching { progressRepository.startCourse(courseId, it.lessonCount) }
+            }
             combine(
                 courseRepository.observeLessons(courseId),
                 progressRepository.observeAllProgress()
             ) { lessons, progressList ->
                 _state.value = _state.value.copy(
+                    course = course,
                     lessons = lessons,
                     progress = progressList.firstOrNull { it.courseId == courseId },
                     isLoading = false

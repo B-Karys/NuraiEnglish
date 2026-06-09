@@ -30,6 +30,9 @@ class CourseRepository @Inject constructor(
     fun observeLessons(courseId: String): Flow<List<Lesson>> =
         lessonDao.observeByCourse(courseId).map { it.map { e -> e.toDomain() } }
 
+    suspend fun getCourse(courseId: String): Course? =
+        courseDao.getById(courseId)?.toDomain()
+
     suspend fun syncCourses() {
         val snap = firestore.collection("courses")
             .whereEqualTo("isPublished", true)
