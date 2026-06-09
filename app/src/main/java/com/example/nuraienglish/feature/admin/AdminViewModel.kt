@@ -8,7 +8,9 @@ import com.example.nuraienglish.core.data.model.LearningCard
 import com.example.nuraienglish.core.data.model.Lesson
 import com.example.nuraienglish.core.data.model.Task
 import com.example.nuraienglish.core.data.model.TaskType
+import com.example.nuraienglish.core.data.model.User
 import com.example.nuraienglish.core.data.repository.CourseRepository
+import com.example.nuraienglish.core.data.repository.UserAdminRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +23,8 @@ data class AdminUiState(
     val lessonsByCourse: Map<String, List<Lesson>> = emptyMap(),
     val cardsByLesson: Map<String, List<LearningCard>> = emptyMap(),
     val tasksByLesson: Map<String, List<Task>> = emptyMap(),
+    val users: List<User> = emptyList(),
+    val currentAdminUid: String = "",
     val isSaving: Boolean = false,
     val successMessage: String? = null,
     val error: String? = null
@@ -28,13 +32,15 @@ data class AdminUiState(
 
 @HiltViewModel
 class AdminViewModel @Inject constructor(
-    private val courseRepository: CourseRepository
+    private val courseRepository: CourseRepository,
+    private val userAdminRepository: UserAdminRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AdminUiState())
     val state = _state.asStateFlow()
 
     init {
+        _state.value = _state.value.copy(currentAdminUid = userAdminRepository.currentAdminUid)
         viewModelScope.launch {
             courseRepository.observeCourses().collect { courses ->
                 _state.value = _state.value.copy(courses = courses)
@@ -47,6 +53,15 @@ class AdminViewModel @Inject constructor(
                         }
                     }
                 }
+            }
+        }
+        viewModelScope.launch {
+            userAdminRepository.observeUsers().collect { users ->
+                val currentAdminUid = userAdminRepository.currentAdminUid
+                _state.value = _state.value.copy(
+                    users = users.filterNot { it.uid == currentAdminUid },
+                    currentAdminUid = currentAdminUid
+                )
             }
         }
     }
@@ -197,6 +212,42 @@ class AdminViewModel @Inject constructor(
     }
 
     fun clearMessage() { _state.value = _state.value.copy(successMessage = null, error = null) }
+
+    fun saveUserProfile(user: User, successMsg: String = "User saved!") {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isSaving = true, error = null)
+            runCatching { userAdminRepository.saveUserProfile(user) }
+                .onSuccess { _state.value = _state.value.copy(isSaving = false, successMessage = successMsg) }
+                .onFailure { _state.value = _state.value.copy(isSaving = false, error = it.message) }
+        }
+    }
+
+    fun deleteUserProfile(uid: String, successMsg: String = "User profile deleted!") {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isSaving = true, error = null)
+            runCatching { userAdminRepository.deleteUserProfile(uid) }
+                .onSuccess { _state.value = _state.value.copy(isSaving = false, successMessage = successMsg) }
+                .onFailure { _state.value = _state.value.copy(isSaving = false, error = it.message) }
+        }
+    }
+
+    fun resetUserProgress(uid: String, successMsg: String = "Progress reset!") {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isSaving = true, error = null)
+            runCatching { userAdminRepository.resetUserProgress(uid) }
+                .onSuccess { _state.value = _state.value.copy(isSaving = false, successMessage = successMsg) }
+                .onFailure { _state.value = _state.value.copy(isSaving = false, error = it.message) }
+        }
+    }
+
+    fun sendPasswordReset(email: String, successMsg: String = "Password reset link sent!") {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isSaving = true, error = null)
+            runCatching { userAdminRepository.sendPasswordReset(email) }
+                .onSuccess { _state.value = _state.value.copy(isSaving = false, successMessage = successMsg) }
+                .onFailure { _state.value = _state.value.copy(isSaving = false, error = it.message) }
+        }
+    }
 
     // ─── Sample Data Seeding ──────────────────────────────────────────────────
 

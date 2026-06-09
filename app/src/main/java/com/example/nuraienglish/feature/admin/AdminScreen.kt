@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.nuraienglish.core.data.model.AdminAccess
 import com.example.nuraienglish.core.data.model.AppLanguage
 import com.example.nuraienglish.core.data.model.Course
 import com.example.nuraienglish.core.data.model.CourseType
@@ -22,6 +23,7 @@ import com.example.nuraienglish.core.data.model.LearningCardType
 import com.example.nuraienglish.core.data.model.Lesson
 import com.example.nuraienglish.core.data.model.Task
 import com.example.nuraienglish.core.data.model.TaskType
+import com.example.nuraienglish.core.data.model.User
 import com.example.nuraienglish.core.ui.UiStrings
 import com.example.nuraienglish.core.ui.uiStrings
 import com.example.nuraienglish.feature.cards.CardStudyStrings
@@ -42,6 +44,7 @@ fun AdminScreen(
         strings.adminAddLesson,
         cardStrings.addCard,
         strings.adminAddTask,
+        "Users",
         strings.adminSeedData,
     )
 
@@ -125,7 +128,16 @@ fun AdminScreen(
                     },
                     onDelete = { cid, lid, tid -> viewModel.deleteTask(cid, lid, tid, strings.adminDeleted) }
                 )
-                4 -> SeedDataTab(strings = strings, isSaving = state.isSaving, onSeed = viewModel::seedSampleData)
+                4 -> UsersTab(
+                    strings = strings,
+                    users = state.users,
+                    isSaving = state.isSaving,
+                    onSave = { user -> viewModel.saveUserProfile(user) },
+                    onSendPasswordReset = { email -> viewModel.sendPasswordReset(email) },
+                    onResetProgress = { uid -> viewModel.resetUserProgress(uid) },
+                    onDelete = { uid -> viewModel.deleteUserProfile(uid) }
+                )
+                5 -> SeedDataTab(strings = strings, isSaving = state.isSaving, onSeed = viewModel::seedSampleData)
             }
         }
     }
@@ -670,6 +682,239 @@ private fun TaskTab(
 }
 
 // ─── Seed Data Tab ────────────────────────────────────────────────────────────
+
+@Composable
+private fun UsersTab(
+    strings: UiStrings,
+    users: List<User>,
+    isSaving: Boolean,
+    onSave: (User) -> Unit,
+    onSendPasswordReset: (String) -> Unit,
+    onResetProgress: (String) -> Unit,
+    onDelete: (String) -> Unit
+) {
+    var editing by remember { mutableStateOf<User?>(null) }
+    var pendingDelete by remember { mutableStateOf<User?>(null) }
+    var pendingProgressReset by remember { mutableStateOf<User?>(null) }
+    var displayName by remember(editing) { mutableStateOf(editing?.displayName.orEmpty()) }
+    var email by remember(editing) { mutableStateOf(editing?.email.orEmpty()) }
+    var languageCode by remember(editing) { mutableStateOf(editing?.language ?: AppLanguage.ENGLISH.code) }
+    var points by remember(editing) { mutableStateOf(editing?.points?.toString() ?: "0") }
+    var currentLevel by remember(editing) { mutableStateOf(editing?.currentLevel ?: "A1") }
+    var unlockedLevels by remember(editing) { mutableStateOf(editing?.unlockedLevels?.joinToString(", ") ?: "A1") }
+    var isAdmin by remember(editing) { mutableStateOf(editing?.isAdmin ?: false) }
+    val editingIsOwner = editing?.let { AdminAccess.isOwner(it.email) } == true
+
+    pendingDelete?.let { user ->
+        DeleteConfirmDialog(
+            strings = strings,
+            itemName = user.email.ifBlank { user.uid },
+            onConfirm = {
+                onDelete(user.uid)
+                pendingDelete = null
+                if (editing?.uid == user.uid) editing = null
+            },
+            onDismiss = { pendingDelete = null }
+        )
+    }
+
+    pendingProgressReset?.let { user ->
+        AlertDialog(
+            onDismissRequest = { pendingProgressReset = null },
+            title = { Text("Reset progress?", fontWeight = FontWeight.Bold) },
+            text = { Text("This will clear lesson progress and set points back to 0 for ${user.email}.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onResetProgress(user.uid)
+                        pendingProgressReset = null
+                        if (editing?.uid == user.uid) {
+                            editing = editing?.copy(points = 0, currentLevel = "A1", unlockedLevels = listOf("A1"))
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Reset") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { pendingProgressReset = null }) { Text(strings.adminCancel) }
+            }
+        )
+    }
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        SectionLabel("Users")
+        if (users.isEmpty()) {
+            Text("No users found.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        users.forEach { user ->
+            UserAdminCard(
+                user = user,
+                editLabel = strings.adminEdit,
+                deleteLabel = strings.adminDelete,
+                isSaving = isSaving,
+                isOwner = AdminAccess.isOwner(user.email),
+                onEdit = { editing = user },
+                onSendPasswordReset = { onSendPasswordReset(user.email) },
+                onResetProgress = { pendingProgressReset = user },
+                onDelete = { pendingDelete = user }
+            )
+        }
+
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        Text(
+            if (editing != null) "Edit user" else "Select a user to edit",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            enabled = editing != null
+        )
+        OutlinedTextField(
+            value = displayName,
+            onValueChange = { displayName = it },
+            label = { Text("Display name") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            enabled = editing != null
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(
+                value = points,
+                onValueChange = { points = it },
+                label = { Text("Points") },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                enabled = editing != null
+            )
+            OutlinedTextField(
+                value = currentLevel,
+                onValueChange = { currentLevel = it },
+                label = { Text("Level") },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                enabled = editing != null
+            )
+        }
+        OutlinedTextField(
+            value = unlockedLevels,
+            onValueChange = { unlockedLevels = it },
+            label = { Text("Unlocked levels, comma separated") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            enabled = editing != null
+        )
+        Text("Language", style = MaterialTheme.typography.labelLarge)
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AppLanguage.entries.forEach { lang ->
+                FilterChip(
+                    selected = languageCode == lang.code,
+                    onClick = { if (editing != null) languageCode = lang.code },
+                    enabled = editing != null,
+                    label = { Text(lang.code.uppercase()) }
+                )
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = isAdmin,
+                onCheckedChange = { isAdmin = it },
+                enabled = editing != null && !editingIsOwner
+            )
+            Text(if (editingIsOwner) "Owner admin" else "Admin")
+        }
+
+        SaveRow(
+            strings = strings,
+            isSaving = isSaving,
+            isEditing = editing != null,
+            saveLabel = "Save user",
+            enabled = editing != null && email.isNotBlank(),
+            onCancel = { editing = null },
+            onSave = {
+                val base = editing ?: return@SaveRow
+                onSave(
+                    base.copy(
+                        email = email.trim(),
+                        displayName = displayName.trim(),
+                        language = languageCode,
+                        points = points.toIntOrNull() ?: 0,
+                        currentLevel = currentLevel.trim().ifBlank { "A1" },
+                        unlockedLevels = unlockedLevels.split(",").map { it.trim() }.filter { it.isNotBlank() },
+                        isAdmin = if (editingIsOwner) true else isAdmin
+                    )
+                )
+                editing = null
+            }
+        )
+    }
+}
+
+@Composable
+private fun UserAdminCard(
+    user: User,
+    editLabel: String,
+    deleteLabel: String,
+    isSaving: Boolean,
+    isOwner: Boolean,
+    onEdit: () -> Unit,
+    onSendPasswordReset: () -> Unit,
+    onResetProgress: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        user.email.ifBlank { "No email" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        "${user.displayName.ifBlank { "Unnamed" }} - ${user.currentLevel} - ${user.points} pts",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (isOwner || user.isAdmin) {
+                        Text(
+                            if (isOwner) "Owner" else "Admin",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                IconButton(onClick = onDelete, enabled = !isSaving && !isOwner) {
+                    Icon(Icons.Default.Delete, contentDescription = deleteLabel, tint = MaterialTheme.colorScheme.error)
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(onClick = onEdit, enabled = !isSaving) { Text(editLabel) }
+                OutlinedButton(onClick = onSendPasswordReset, enabled = !isSaving && user.email.isNotBlank()) {
+                    Text("Send reset link")
+                }
+                OutlinedButton(onClick = onResetProgress, enabled = !isSaving && !isOwner) {
+                    Text("Reset progress")
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun SeedDataTab(strings: UiStrings, isSaving: Boolean, onSeed: () -> Unit) {

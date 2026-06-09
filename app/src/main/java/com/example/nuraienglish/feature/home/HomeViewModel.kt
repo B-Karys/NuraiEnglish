@@ -2,6 +2,7 @@ package com.example.nuraienglish.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.nuraienglish.core.data.model.AdminAccess
 import com.example.nuraienglish.core.data.model.Course
 import com.example.nuraienglish.core.data.model.Progress
 import com.example.nuraienglish.core.data.model.User
@@ -31,13 +32,6 @@ class HomeViewModel @Inject constructor(
     private val appPreferences: AppPreferences
 ) : ViewModel() {
 
-    companion object {
-        // Accounts with these emails always get admin access
-        private val ADMIN_EMAILS = setOf(
-            "shayne.f@mail.ru" // replace with your actual admin email
-        )
-    }
-
     private val _state = MutableStateFlow(HomeUiState())
     val state = _state.asStateFlow()
 
@@ -60,7 +54,7 @@ class HomeViewModel @Inject constructor(
             authRepository.currentUser.collect { fbUser ->
                 if (fbUser != null) {
                     val fullUser = authRepository.getUser(fbUser.uid) ?: fbUser
-                    val isAdmin = fullUser.isAdmin || ADMIN_EMAILS.contains(fullUser.email)
+                    val isAdmin = AdminAccess.isAdmin(fullUser)
                     _state.value = _state.value.copy(user = fullUser, isAdmin = isAdmin)
                 }
             }

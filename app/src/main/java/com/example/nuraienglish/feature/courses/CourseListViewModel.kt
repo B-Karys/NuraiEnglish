@@ -2,6 +2,7 @@ package com.example.nuraienglish.feature.courses
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.nuraienglish.core.data.model.AdminAccess
 import com.example.nuraienglish.core.data.model.Course
 import com.example.nuraienglish.core.data.model.Progress
 import com.example.nuraienglish.core.data.repository.AuthRepository
@@ -27,12 +28,6 @@ class CourseListViewModel @Inject constructor(
     private val progressRepository: ProgressRepository
 ) : ViewModel() {
 
-    companion object {
-        private val ADMIN_EMAILS = setOf(
-            "shayne.f@mail.ru"
-        )
-    }
-
     private val _state = MutableStateFlow(CourseListUiState())
     val state = _state.asStateFlow()
 
@@ -48,7 +43,7 @@ class CourseListViewModel @Inject constructor(
                     courses = courses,
                     progressMap = progressList.associateBy { it.courseId },
                     totalPoints = progressList.sumOf { it.points },
-                    isAdmin = fullUser?.isAdmin == true || ADMIN_EMAILS.contains(fullUser?.email),
+                    isAdmin = AdminAccess.isAdmin(fullUser),
                     isLoading = false
                 )
             }.launchIn(this)
